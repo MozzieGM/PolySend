@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   X,
 } from 'lucide-react';
+import { useI18n } from '../lib/i18n';
 
 interface ConnectResult {
   ok: boolean;
@@ -37,6 +38,7 @@ export function KeyModal({
   onUseServer,
   onDisconnect,
 }: KeyModalProps) {
+  const { t } = useI18n();
   const [value, setValue] = useState('');
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -96,13 +98,11 @@ export function KeyModal({
     setError(null);
     const result = await onConnect(key);
     if (!result.ok) {
-      setError(result.error ?? 'Não foi possível validar a chave.');
+      setError(result.error ?? t('key.validationFailed'));
       setBusy(false);
       return;
     }
-    finishSuccess(
-      `${result.count ?? 0} modelos disponíveis. Chave validada com sucesso.`,
-    );
+    finishSuccess(t('key.successModels', { count: result.count ?? 0 }));
   };
 
   const handleServer = async () => {
@@ -111,11 +111,11 @@ export function KeyModal({
     setError(null);
     const result = await onUseServer();
     if (!result.ok) {
-      setError(result.error ?? 'A chave do servidor não respondeu.');
+      setError(result.error ?? t('key.serverFailed'));
       setBusy(false);
       return;
     }
-    finishSuccess('Usando a chave do servidor (.env).');
+    finishSuccess(t('key.successServer'));
   };
 
   return (
@@ -137,24 +137,21 @@ export function KeyModal({
             <KeyRound size={19} strokeWidth={2} />
           </span>
           <div className="modal-heading">
-            <span className="eyebrow">acesso · opencode go</span>
-            <h2 id="key-modal-title">Conectar sua API</h2>
+            <span className="eyebrow">{t('key.eyebrow')}</span>
+            <h2 id="key-modal-title">{t('key.title')}</h2>
           </div>
           <button
             type="button"
             className="icon-btn modal-close"
             onClick={onClose}
             disabled={busy}
-            aria-label="Fechar"
+            aria-label={t('key.close')}
           >
             <X size={17} strokeWidth={2.2} />
           </button>
         </div>
 
-        <p className="modal-intro">
-          Cole a API key do seu workspace no OpenCode Console. A validação acontece agora, ao
-          vivo, contra o catálogo Go.
-        </p>
+        <p className="modal-intro">{t('key.intro')}</p>
 
         {success ? (
           <div className="modal-success" role="status">
@@ -162,15 +159,15 @@ export function KeyModal({
               <Check size={16} strokeWidth={3} />
             </span>
             <div>
-              <strong>Conectado</strong>
+              <strong>{t('key.successTitle')}</strong>
               <p>{success}</p>
             </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="key-form">
             <label className="key-label" htmlFor="api-key">
-              <span>API key</span>
-              {userKeyActive && <em>já existe uma chave nesta aba</em>}
+              <span>{t('key.label')}</span>
+              {userKeyActive && <em>{t('key.already')}</em>}
             </label>
             <div className={`key-input-wrap ${error ? 'has-error' : ''}`}>
               <LockKeyhole size={15} strokeWidth={2} />
@@ -183,7 +180,7 @@ export function KeyModal({
                   setValue(event.target.value);
                   setError(null);
                 }}
-                placeholder="oc_sk_..."
+                placeholder={t('key.placeholder')}
                 autoComplete="off"
                 spellCheck={false}
                 disabled={busy}
@@ -192,7 +189,7 @@ export function KeyModal({
                 type="button"
                 className="icon-btn key-eye"
                 onClick={() => setShow((current) => !current)}
-                aria-label={show ? 'Ocultar chave' : 'Mostrar chave'}
+                aria-label={show ? t('key.hide') : t('key.show')}
                 tabIndex={-1}
               >
                 {show ? <EyeOff size={15} strokeWidth={2} /> : <Eye size={15} strokeWidth={2} />}
@@ -213,11 +210,11 @@ export function KeyModal({
               {busy ? (
                 <>
                   <Loader2 size={15} className="is-spinning" />
-                  Validando chave…
+                  {t('key.validating')}
                 </>
               ) : (
                 <>
-                  Validar e conectar
+                  {t('key.submit')}
                   <ArrowRight size={15} strokeWidth={2.4} />
                 </>
               )}
@@ -228,7 +225,7 @@ export function KeyModal({
         {serverKeyConfigured && !success && (
           <>
             <div className="modal-divider">
-              <span>ou</span>
+              <span>{t('key.or')}</span>
             </div>
             <button
               type="button"
@@ -237,35 +234,39 @@ export function KeyModal({
               disabled={busy}
             >
               <Server size={14} strokeWidth={2} />
-              Usar a chave do servidor (.env)
+              {t('key.useServer')}
             </button>
           </>
         )}
 
         {userKeyActive && !success && (
           <button type="button" className="modal-disconnect" onClick={onDisconnect} disabled={busy}>
-            Remover a chave do painel desta aba
+            {t('key.remove')}
           </button>
         )}
 
         <div className="modal-help">
-          <span className="modal-help-title">Como pegar sua chave</span>
+          <span className="modal-help-title">{t('key.helpTitle')}</span>
           <ol>
             <li>
-              Abra o <a href="https://opencode.ai/console" target="_blank" rel="noreferrer">OpenCode Console <ArrowRight size={10} /></a> e entre no workspace com Go ativo.
+              {t('key.help1Before')}
+              <a href="https://opencode.ai/console" target="_blank" rel="noreferrer">
+                {t('key.consoleLink')} <ArrowRight size={10} />
+              </a>
+              {t('key.help1After')}
             </li>
-            <li>Acesse <strong>Account › Personal API keys</strong> e crie uma chave.</li>
-            <li>Copie a chave (ela aparece só uma vez) e cole aqui.</li>
+            <li>
+              {t('key.help2Before')}
+              <strong>{t('key.accountLink')}</strong>
+              {t('key.help2After')}
+            </li>
+            <li>{t('key.help3')}</li>
           </ol>
         </div>
 
         <div className="modal-security">
           <ShieldCheck size={15} strokeWidth={2} />
-          <p>
-            A chave do painel fica apenas no <strong>sessionStorage</strong> desta aba e vai
-            direto para o seu backend local. O servidor não grava sua chave em disco. Para
-            produção, mantenha a chave somente no servidor.
-          </p>
+          <p>{t('key.security')}</p>
         </div>
       </div>
     </div>

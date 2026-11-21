@@ -1,4 +1,5 @@
 import { LayoutGrid, Mail, PenLine } from 'lucide-react';
+import { useI18n } from '../lib/i18n';
 
 export type MobileTab = 'briefing' | 'email' | 'models';
 
@@ -9,14 +10,16 @@ interface MobileTabsProps {
 }
 
 const TABS = [
-  { id: 'briefing' as const, label: 'Briefing', icon: PenLine },
-  { id: 'email' as const, label: 'E-mail', icon: Mail },
-  { id: 'models' as const, label: 'Modelos', icon: LayoutGrid },
-];
+  { id: 'briefing' as const, label: 'tabs.briefing', icon: PenLine },
+  { id: 'email' as const, label: 'tabs.email', icon: Mail },
+  { id: 'models' as const, label: 'tabs.models', icon: LayoutGrid },
+] as const;
 
 export function MobileTabs({ active, modelCount, onChange }: MobileTabsProps) {
+  const { t } = useI18n();
+
   return (
-    <nav className="mobile-tabs" aria-label="Navegação do estúdio">
+    <nav className="mobile-tabs" aria-label={t('tabs.navAria')}>
       <div className="mobile-tabs-inner">
         {TABS.map((tab) => {
           const Icon = tab.icon;
@@ -35,7 +38,7 @@ export function MobileTabs({ active, modelCount, onChange }: MobileTabsProps) {
                   <span className="mobile-tab-badge">{modelCount}</span>
                 )}
               </span>
-              <span>{tab.label}</span>
+              <span>{t(tab.label)}</span>
             </button>
           );
         })}

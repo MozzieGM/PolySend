@@ -17,6 +17,7 @@ import {
   formatUSD,
 } from '../lib/format';
 import { PLAN_LABELS, PLAN_PRICES, monthlyLimit } from '../lib/models';
+import { useI18n } from '../lib/i18n';
 
 interface UsageBarProps {
   usage: GoUsage | null;
@@ -38,9 +39,11 @@ function meterTone(percent: number | null): string {
 }
 
 function MiniMeter({ label, window }: { label: string; window: UsageWindow | null }) {
+  const { locale } = useI18n();
   const percent = window?.percent ?? null;
   const tone = meterTone(percent);
   const width = Math.min(100, Math.max(percent ?? 0, percent && percent > 0 ? 1.5 : 0));
+  const resetsAt = formatReset(window?.resetsAt, locale);
 
   return (
     <div className={`usage-mini tone-${tone}`}>
@@ -51,8 +54,8 @@ function MiniMeter({ label, window }: { label: string; window: UsageWindow | nul
       <div className="usage-mini-track">
         <i style={{ width: `${width}%` }} />
       </div>
-      <div className="usage-mini-reset" title={`Renova ${formatReset(window?.resetsAt)}`}>
-        renova {formatReset(window?.resetsAt)}
+      <div className="usage-mini-reset" title={resetsAt}>
+        {resetsAt}
       </div>
     </div>
   );
@@ -69,6 +72,7 @@ export function UsageBar({
   onRefresh,
   onOpenKey,
 }: UsageBarProps) {
+  const { locale, t } = useI18n();
   const limit = monthlyLimit(model, plan);
   const sessionPercent = limit && limit > 0 ? (stats.allowance / limit) * 100 : null;
   const sessionLabel =
@@ -81,26 +85,30 @@ export function UsageBar({
           : formatPercent(sessionPercent);
 
   return (
-    <section className="panel usage-bar" id="plan-usage" aria-label="Consumo do plano">
+    <section className="panel usage-bar" id="plan-usage" aria-label={t('usage.title')}>
       <div className="usage-bar-head">
         <div className="usage-bar-title">
           <span className="usage-pulse" aria-hidden="true" />
-          <span className="eyebrow">consumo do plano</span>
+          <span className="eyebrow">{t('usage.title')}</span>
           <span className="usage-plan-name">
-            {PLAN_LABELS[plan]} · {PLAN_PRICES[plan]}
+            {PLAN_LABELS[plan]} · {PLAN_PRICES[plan][locale]}
           </span>
         </div>
         <div className="usage-bar-actions">
           <span className="usage-updated">
-            {usageLoading ? 'sincronizando' : usage ? formatRelative(usage.fetchedAt) : '—'}
+            {usageLoading
+              ? t('usage.syncing')
+              : usage
+                ? formatRelative(usage.fetchedAt, locale)
+                : '—'}
           </span>
           <button
             type="button"
             className="icon-btn usage-refresh"
             onClick={onRefresh}
             disabled={usageLoading || !hasKey}
-            title="Atualizar consumo do plano"
-            aria-label="Atualizar consumo do plano"
+            title={t('usage.refreshTitle')}
+            aria-label={t('usage.refreshAria')}
           >
             <RefreshCw size={13} className={usageLoading ? 'is-spinning' : ''} />
           </button>
@@ -109,9 +117,9 @@ export function UsageBar({
             href="https://opencode.ai/console/go"
             target="_blank"
             rel="noreferrer"
-            title="Abrir o OpenCode Console"
+            title={t('usage.consoleTitle')}
           >
-            <span>Console</span>
+            <span>{t('usage.console')}</span>
             <ArrowUpRight size={11} strokeWidth={2.2} />
           </a>
         </div>
@@ -120,50 +128,57 @@ export function UsageBar({
       {!hasKey ? (
         <div className="usage-bar-note">
           <KeyRound size={13} strokeWidth={2} />
-          <span>Conecte sua chave para acompanhar as janelas reais do Go.</span>
+          <span>{t('usage.noKey')}</span>
           <button type="button" className="text-btn" onClick={onOpenKey}>
-            Conectar API
+            {t('usage.connect')}
           </button>
         </div>
       ) : usage?.available ? (
         <>
           <div className="usage-meter-row">
-            <MiniMeter label="5 horas" window={usage.rolling} />
-            <MiniMeter label="Semana" window={usage.weekly} />
-            <MiniMeter label="Mês" window={usage.monthly} />
+            <MiniMeter label={t('usage.window5h')} window={usage.rolling} />
+            <MiniMeter label={t('usage.week')} window={usage.weekly} />
+            <MiniMeter label={t('usage.month')} window={usage.monthly} />
           </div>
           <div className="usage-bar-foot">
             <div className="usage-foot-main">
               <span className="usage-foot-item">
-                <strong>{stats.runs}</strong> req.
+                {t('usage.footRequests', { count: stats.runs })}
               </span>
               <span className="usage-foot-sep" aria-hidden="true" />
               <span className="usage-foot-item">
-                {formatTokens(stats.inputTokens)} in · {formatTokens(stats.outputTokens)} out
+                {t('usage.footTokens', {
+                  input: formatTokens(stats.inputTokens),
+                  output: formatTokens(stats.outputTokens),
+                })}
               </span>
               <span className="usage-foot-sep" aria-hidden="true" />
               <span className="usage-foot-item">
-                tabela <strong>{formatCost(stats.listCost)}</strong>
+                {t('usage.footTable', { cost: formatCost(stats.listCost) })}
               </span>
               <span className="usage-foot-sep" aria-hidden="true" />
               <span className="usage-foot-item">
-                plano <strong className="accent">{formatCost(stats.allowance)}</strong>
+                {t('usage.footPlan', { cost: formatCost(stats.allowance) })}
               </span>
               {sessionLabel && (
                 <span
                   className="usage-foot-limit"
-                  title={`${formatUSD(limit ?? 0, 0)} de limite mensal para ${model?.name ?? 'este modelo'} no ${PLAN_LABELS[plan]}`}
+                  title={t('models.limitTitle', {
+                    price: formatUSD(limit ?? 0, 0),
+                    model: model?.name ?? t('email.noModel'),
+                    plan: PLAN_LABELS[plan],
+                  })}
                 >
-                  sessão {sessionLabel} do limite
+                  {t('usage.footSession', { percent: sessionLabel })}
                 </span>
               )}
             </div>
             <div className="usage-foot-side">
-              <span title="Time to first token">
+              <span title={t('usage.ttftTitle')}>
                 <Timer size={11} strokeWidth={2} />
                 {formatDuration(stats.lastTtftMs)}
               </span>
-              <span title="Tokens por segundo">
+              <span title={t('usage.tpsTitle')}>
                 <Zap size={11} strokeWidth={2} />
                 {formatRate(stats.lastTps)}
               </span>
@@ -174,14 +189,11 @@ export function UsageBar({
         <div className="usage-bar-note">
           <span>
             {usageError ??
-              usage?.message ??
-              (usageLoading
-                ? 'Buscando o consumo do plano…'
-                : 'Consumo do plano indisponível para esta chave.')}
+              (usageLoading ? t('usage.fetching') : t('usage.unavailable'))}
           </span>
           <button type="button" className="text-btn" onClick={onRefresh} disabled={usageLoading}>
             <RefreshCw size={11} className={usageLoading ? 'is-spinning' : ''} />
-            Atualizar
+            {t('usage.update')}
           </button>
         </div>
       )}

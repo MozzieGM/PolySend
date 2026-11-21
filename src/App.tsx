@@ -17,10 +17,9 @@ import {
 } from './lib/api';
 import { slugify, truncate } from './lib/format';
 import { pickReasoningEffort } from './lib/models';
-import {
-  DEFAULT_BRIEFING,
-  type Preset,
-} from './lib/presets';
+import { getDefaultBriefing, type Preset } from './lib/presets';
+import { errorMessage, streamErrorMessage } from './lib/errors';
+import { useI18n } from './lib/i18n';
 import type {
   Briefing,
   ConnectionState,
@@ -87,14 +86,6 @@ function writeStorage(storage: 'local' | 'session', key: string, value: string) 
   }
 }
 
-function friendlyError(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  if (error instanceof TypeError) {
-    return 'Não foi possível falar com o servidor. Verifique se o backend está rodando (npm run dev ou npm start).';
-  }
-  return 'Algo deu errado. Tente novamente.';
-}
-
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(() =>
     typeof window === 'undefined' ? false : window.matchMedia(query).matches,
@@ -112,6 +103,7 @@ function useMediaQuery(query: string): boolean {
 }
 
 export default function App() {
+  const { locale, t } = useI18n();
   const isWide = useMediaQuery('(min-width: 1360px)');
   const isMobile = useMediaQuery('(max-width: 900px)');
   const [storedKey, setStoredKey] = useState(() => readStorage('session', KEY_STORAGE));
@@ -130,7 +122,8 @@ export default function App() {
     const stored = readStorage('local', PLAN_STORAGE);
     return stored === 'go-plus' || stored === 'go-teams' ? stored : 'go';
   });
-  const [briefing, setBriefing] = useState<Briefing>(DEFAULT_BRIEFING);
+  const [briefing, setBriefing] = useState<Briefing>(() => getDefaultBriefing(locale));
+  const [briefingDirty, setBriefingDirty] = useState(false);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [stats, setStats] = useState<SessionStats>(EMPTY_STATS);
   const [keyModalOpen, setKeyModalOpen] = useState(false);
@@ -195,7 +188,7 @@ export default function App() {
         return data;
       } catch (error) {
         const apiError = error instanceof ApiError ? error : null;
-        setModelsError(friendlyError(error));
+        setModelsError(errorMessage(error, t));
         if (apiError?.status === 401) {
           setConnection(key || health?.serverKeyConfigured ? 'error' : 'nokey');
         } else {
@@ -206,22 +199,25 @@ export default function App() {
         setModelsLoading(false);
       }
     },
-    [applyCatalog, health?.serverKeyConfigured],
+    [applyCatalog, health?.serverKeyConfigured, t],
   );
 
-  const loadUsage = useCallback(async (key?: string) => {
-    setUsageLoading(true);
-    setUsageError(null);
-    try {
-      const data = await fetchUsage(key);
-      setUsage(data);
-      if (!data.available) setUsageError(data.message ?? null);
-    } catch (error) {
-      setUsageError(friendlyError(error));
-    } finally {
-      setUsageLoading(false);
-    }
-  }, []);
+  const loadUsage = useCallback(
+    async (key?: string) => {
+      setUsageLoading(true);
+      setUsageError(null);
+      try {
+        const data = await fetchUsage(key);
+        setUsage(data);
+        if (!data.available) setUsageError(t('usage.unavailable'));
+      } catch (error) {
+        setUsageError(errorMessage(error, t));
+      } finally {
+        setUsageLoading(false);
+      }
+    },
+    [t],
+  );
 
   const scheduleUsageRefresh = useCallback(() => {
     if (usageRefreshTimer.current) window.clearTimeout(usageRefreshTimer.current);
@@ -276,17 +272,17 @@ export default function App() {
 
       if (!hasKey) {
         setKeyModalOpen(true);
-        showToast('Conecte sua chave do OpenCode Go para gerar.', 'error');
+        showToast(t('toast.connectToGenerate'), 'error');
         return;
       }
       if (!selectedModel) {
         if (isMobile) setMobileTab('models');
         else if (!isWide) setModelsDrawerOpen(true);
-        showToast('Escolha um modelo no catálogo Go.', 'error');
+        showToast(t('toast.chooseModel'), 'error');
         return;
       }
       if (job.mode === 'generate' && !briefing.topic.trim()) {
-        showToast('Descreva o objetivo do e-mail antes de gerar.', 'error');
+        showToast(t('toast.describeGoal'), 'error');
         return;
       }
       if (job.mode !== 'generate' && !draft.body.trim()) return;
@@ -372,7 +368,7 @@ export default function App() {
               if (done.truncated) truncated = true;
             },
             onError: (error) => {
-              streamError = error.message;
+              streamError = streamErrorMessage(error.code, t);
             },
           },
         });
@@ -416,9 +412,7 @@ export default function App() {
             phase: 'idle',
             error:
               streamError ??
-              (!cleanBody
-                ? 'O modelo não escreveu o e-mail. Tente outro modelo ou gere novamente.'
-                : null),
+              (!cleanBody ? t('errors.empty_response') : null),
           }));
         }
 
@@ -434,10 +428,7 @@ export default function App() {
         if (streamError) {
           showToast(streamError, 'error');
         } else if (truncated) {
-          showToast(
-            'A resposta atingiu o limite de tokens e pode estar incompleta. Tente novamente.',
-            'info',
-          );
+          showToast(t('toast.truncated'), 'info');
         }
         scheduleUsageRefresh();
       } catch (error) {
@@ -478,9 +469,9 @@ export default function App() {
           if (finalUsage || applied) {
             finalizeStats(finalUsage, startedAt, firstTokenAt, elapsedMs, selectedModel.name);
           }
-          showToast('Geração interrompida.', 'info');
+          showToast(t('toast.stopped'), 'info');
         } else {
-          const message = friendlyError(error);
+          const message = errorMessage(error, t);
           const cleanBody = accumulated.replace(/^\s*\n+/, '').trim();
           if (job.mode === 'selection') {
             setDraft((previous) => ({
@@ -534,6 +525,7 @@ export default function App() {
       selectedModel,
       showToast,
       storedKey,
+      t,
     ],
   );
 
@@ -570,7 +562,7 @@ export default function App() {
       } catch (error) {
         if (cancelled) return;
         const apiError = error instanceof ApiError ? error : null;
-        setModelsError(friendlyError(error));
+        setModelsError(errorMessage(error, t));
         setModelsLoading(false);
         setConnection(
           apiError?.status === 401 && !key && !healthResult?.serverKeyConfigured
@@ -596,6 +588,15 @@ export default function App() {
     }, 60_000);
     return () => window.clearInterval(interval);
   }, [hasKey, loadUsage, storedKey]);
+
+  const previousLocale = useRef(locale);
+  useEffect(() => {
+    if (previousLocale.current === locale) return;
+    previousLocale.current = locale;
+    if (!briefingDirty && !draft.body) {
+      setBriefing(getDefaultBriefing(locale));
+    }
+  }, [briefingDirty, draft.body, locale]);
 
   useEffect(() => {
     writeStorage('local', MODEL_STORAGE, selectedId);
@@ -627,12 +628,14 @@ export default function App() {
   );
 
   const handleBriefingChange = (patch: Partial<Briefing>) => {
+    setBriefingDirty(true);
     setBriefing((previous) => ({ ...previous, ...patch }));
   };
 
   const handleApplyPreset = (preset: Preset) => {
+    setBriefingDirty(false);
     setBriefing(preset.briefing);
-    showToast(`Exemplo “${preset.label}” carregado.`, 'info');
+    showToast(t('briefing.presetLoaded', { label: preset.label }), 'info');
   };
 
   const handleDraftChange = (patch: Partial<Pick<Draft, 'to' | 'subject' | 'body' | 'mode'>>) => {
@@ -651,33 +654,34 @@ export default function App() {
 
   const handleCopy = () => {
     if (!draft.body) return;
-    const content = `Assunto: ${draft.subject}\nPara: ${draft.to}\n\n${draft.body}`;
+    const content = `${t('email.subject')}: ${draft.subject}\n${t('email.to')}: ${draft.to}\n\n${draft.body}`;
     navigator.clipboard
       .writeText(content)
-      .then(() => showToast('E-mail copiado para a área de transferência.', 'success'))
-      .catch(() => showToast('Não foi possível copiar. Selecione o texto manualmente.', 'error'));
+      .then(() => showToast(t('toast.copied'), 'success'))
+      .catch(() => showToast(t('toast.copyFailed'), 'error'));
   };
 
   const handleDownload = () => {
     if (!draft.body) return;
-    const content = `Assunto: ${draft.subject}\nPara: ${draft.to}\n\n${draft.body}`;
+    const content = `${t('email.subject')}: ${draft.subject}\n${t('email.to')}: ${draft.to}\n\n${draft.body}`;
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
+    const fallback = t('email.draftFilename');
     anchor.href = url;
-    anchor.download = `email-${slugify(draft.to || briefing.company || 'rascunho') || 'rascunho'}.txt`;
+    anchor.download = `email-${slugify(draft.to || briefing.company || fallback) || fallback}.txt`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
-    showToast('Download iniciado.', 'success');
+    showToast(t('toast.downloadStarted'), 'success');
   };
 
   const handleNewDraft = () => {
     discardRef.current = true;
     if (isStreaming) abortRef.current?.abort();
     setDraft(EMPTY_DRAFT);
-    showToast('Novo rascunho.', 'info');
+    showToast(t('toast.newDraft'), 'info');
   };
 
   const handleConnectKey = async (key: string) => {
@@ -689,7 +693,7 @@ export default function App() {
       void loadUsage(key);
       return { ok: true, count: data.models.length };
     } catch (error) {
-      return { ok: false, error: friendlyError(error) };
+      return { ok: false, error: errorMessage(error, t) };
     }
   };
 
@@ -702,7 +706,7 @@ export default function App() {
       void loadUsage();
       return { ok: true, count: data.models.length };
     } catch (error) {
-      return { ok: false, error: friendlyError(error) };
+      return { ok: false, error: errorMessage(error, t) };
     }
   };
 
@@ -715,9 +719,9 @@ export default function App() {
       void loadModels()
         .then(() => {
           void loadUsage();
-          showToast('Chave do painel removida. Usando a chave do servidor.', 'info');
+          showToast(t('toast.panelKeyRemovedServer'), 'info');
         })
-        .catch((error) => showToast(friendlyError(error), 'error'));
+        .catch((error) => showToast(errorMessage(error, t), 'error'));
     } else {
       setModels([]);
       setModelsFetchedAt(null);
@@ -726,7 +730,7 @@ export default function App() {
       setConnection('nokey');
       setUsage(null);
       setUsageError(null);
-      showToast('Chave do painel removida.', 'info');
+      showToast(t('toast.panelKeyRemoved'), 'info');
     }
   };
 
@@ -735,7 +739,7 @@ export default function App() {
       await loadModels(storedKey || undefined);
       void loadUsage(storedKey || undefined);
     } catch (error) {
-      showToast(friendlyError(error), 'error');
+      showToast(errorMessage(error, t), 'error');
     }
   };
 

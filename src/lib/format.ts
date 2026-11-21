@@ -1,3 +1,5 @@
+import type { Locale } from '../types';
+
 export function formatUSD(value: number | null | undefined, digits = 2): string {
   const number = typeof value === 'number' && Number.isFinite(value) ? value : 0;
   return new Intl.NumberFormat('en-US', {
@@ -48,22 +50,26 @@ export function formatRate(tps: number | null | undefined): string {
   return `${Math.round(tps)} tok/s`;
 }
 
-export function formatReset(resetsAt: string | null | undefined): string {
+export function formatReset(
+  resetsAt: string | null | undefined,
+  locale: Locale = 'en',
+): string {
   if (!resetsAt) return '—';
   const time = new Date(resetsAt).getTime();
   if (!Number.isFinite(time)) return '—';
   const diff = time - Date.now();
-  if (diff <= 0) return 'agora';
+  const prefix = locale === 'pt-BR' ? 'em ' : 'in ';
+  if (diff <= 0) return locale === 'pt-BR' ? 'agora' : 'now';
   const minutes = Math.round(diff / 60_000);
-  if (minutes < 60) return `em ${Math.max(1, minutes)} min`;
+  if (minutes < 60) return `${prefix}${Math.max(1, minutes)} min`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) {
     const rest = minutes % 60;
-    return rest > 0 ? `em ${hours}h ${rest}min` : `em ${hours}h`;
+    return rest > 0 ? `${prefix}${hours}h ${rest}min` : `${prefix}${hours}h`;
   }
   const days = Math.floor(hours / 24);
   const restHours = hours % 24;
-  return restHours > 0 ? `em ${days}d ${restHours}h` : `em ${days}d`;
+  return restHours > 0 ? `${prefix}${days}d ${restHours}h` : `${prefix}${days}d`;
 }
 
 export function formatClock(iso: string | null | undefined): string {
@@ -73,14 +79,21 @@ export function formatClock(iso: string | null | undefined): string {
   return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
-export function formatRelative(iso: string | null | undefined): string {
-  if (!iso) return 'agora';
+export function formatRelative(
+  iso: string | null | undefined,
+  locale: Locale = 'en',
+): string {
+  if (!iso) return locale === 'pt-BR' ? 'agora' : 'just now';
   const diff = Date.now() - new Date(iso).getTime();
-  if (!Number.isFinite(diff) || diff < 45_000) return 'agora';
+  if (!Number.isFinite(diff) || diff < 45_000) {
+    return locale === 'pt-BR' ? 'agora' : 'just now';
+  }
   const minutes = Math.floor(diff / 60_000);
-  if (minutes < 60) return `há ${minutes} min`;
+  if (minutes < 60) {
+    return locale === 'pt-BR' ? `há ${minutes} min` : `${minutes} min ago`;
+  }
   const hours = Math.floor(minutes / 60);
-  return `há ${hours}h`;
+  return locale === 'pt-BR' ? `há ${hours}h` : `${hours}h ago`;
 }
 
 export function truncate(value: string, max: number): string {

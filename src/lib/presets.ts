@@ -1,4 +1,4 @@
-import type { Briefing } from '../types';
+import type { Briefing, EmailLength, Language, Locale, Tone } from '../types';
 
 export interface Preset {
   id: string;
@@ -7,25 +7,23 @@ export interface Preset {
   briefing: Briefing;
 }
 
-export const DEFAULT_BRIEFING: Briefing = {
-  recipient: 'Mariana Costa · mariana@northwind.com',
-  company: 'Northwind Tecnologia',
-  topic:
-    'Pedir um orçamento para o desenvolvimento de um aplicativo de logística, com previsão de lançamento em oito semanas.',
-  details:
-    'Precisamos de escopo, prazo e faixa de investimento. Temos preferência por reuniões online na parte da tarde.',
-  signature: 'Ana Souza\nHead de Produto · Acme',
-  tone: 'profissional',
-  length: 'medio',
-  language: 'pt-BR',
-};
-
-export const PRESETS: Preset[] = [
+const PRESETS_PT: Preset[] = [
   {
     id: 'orcamento',
     label: 'Pedir orçamento',
     description: 'Proposta para um app de logística',
-    briefing: DEFAULT_BRIEFING,
+    briefing: {
+      recipient: 'Mariana Costa · mariana@northwind.com',
+      company: 'Northwind Tecnologia',
+      topic:
+        'Pedir um orçamento para o desenvolvimento de um aplicativo de logística, com previsão de lançamento em oito semanas.',
+      details:
+        'Precisamos de escopo, prazo e faixa de investimento. Temos preferência por reuniões online na parte da tarde.',
+      signature: 'Ana Souza\nHead de Produto · Acme',
+      tone: 'profissional',
+      length: 'medio',
+      language: 'pt-BR',
+    },
   },
   {
     id: 'followup',
@@ -79,61 +77,93 @@ export const PRESETS: Preset[] = [
   },
 ];
 
-export const TONE_OPTIONS = [
-  { value: 'profissional', label: 'Profissional' },
-  { value: 'direto', label: 'Direto' },
-  { value: 'amigavel', label: 'Amigável' },
-  { value: 'persuasivo', label: 'Persuasivo' },
-  { value: 'empatico', label: 'Empático' },
-  { value: 'formal', label: 'Formal' },
-] as const;
-
-export const LENGTH_OPTIONS = [
-  { value: 'curto', label: 'Curto', hint: 'até 90 palavras' },
-  { value: 'medio', label: 'Médio', hint: '120–170 palavras' },
-  { value: 'longo', label: 'Longo', hint: '200–260 palavras' },
-] as const;
-
-export const LANGUAGE_OPTIONS = [
-  { value: 'pt-BR', label: 'Português (BR)' },
-  { value: 'en', label: 'English' },
-  { value: 'es', label: 'Español' },
-] as const;
-
-export const REFINEMENTS = [
+const PRESETS_EN: Preset[] = [
   {
-    id: 'curto',
-    label: 'Mais curto',
-    instruction:
-      'Deixe o corpo mais curto e direto, preservando o pedido principal, os fatos e a assinatura.',
+    id: 'orcamento',
+    label: 'Ask for a quote',
+    description: 'Proposal for a logistics app',
+    briefing: {
+      recipient: 'Jordan Lee · jordan@northwind.com',
+      company: 'Northwind Technologies',
+      topic:
+        'Request a quote for building a logistics app, with an eight-week launch target.',
+      details:
+        'We need scope, timeline, and a budget range. We prefer online meetings in the afternoon.',
+      signature: 'Alex Morgan\nHead of Product · Acme',
+      tone: 'profissional',
+      length: 'medio',
+      language: 'en',
+    },
   },
   {
-    id: 'formal',
-    label: 'Mais formal',
-    instruction: 'Deixe o tom mais formal e polido, sem ficar rígido ou burocrático.',
+    id: 'followup',
+    label: 'Follow up',
+    description: 'Reconnect on a stalled proposal',
+    briefing: {
+      recipient: 'Riley Chen · riley@lumen.studio',
+      company: 'Lumen Studio',
+      topic:
+        'Follow up on the proposal sent a week ago and see if there are any questions before the decision.',
+      details:
+        'The proposal expires on Friday. Keep it brief and low-pressure. Offer a quick call if useful.',
+      signature: 'Alex Morgan\nHead of Product · Acme',
+      tone: 'amigavel',
+      length: 'curto',
+      language: 'en',
+    },
   },
   {
-    id: 'persuasivo',
-    label: 'Mais persuasivo',
-    instruction:
-      'Torne o texto mais persuasivo, destacando o valor para o destinatário sem exageros.',
+    id: 'reuniao',
+    label: 'Book a meeting',
+    description: 'Present the platform in 30 min',
+    briefing: {
+      recipient: 'Taylor Brooks · taylor@vertex.io',
+      company: 'Vertex Labs',
+      topic:
+        "Propose a 30-minute meeting to present the platform and understand the operations team's priorities.",
+      details:
+        'Suggest Tuesday or Thursday afternoon. Include a short agenda and a calendar link.',
+      signature: 'Alex Morgan\nHead of Product · Acme',
+      tone: 'profissional',
+      length: 'curto',
+      language: 'en',
+    },
   },
   {
-    id: 'cordial',
-    label: 'Mais cordial',
-    instruction: 'Deixe o tom mais cordial e empático, mantendo a clareza e o profissionalismo.',
-  },
-  {
-    id: 'cta',
-    label: 'CTA mais claro',
-    instruction:
-      'Deixe o próximo passo (chamada para ação) mais claro, específico e fácil de responder.',
+    id: 'cobranca',
+    label: 'Polite reminder',
+    description: 'Overdue invoice, no friction',
+    briefing: {
+      recipient: 'Morgan Reed · finance@magma.com',
+      company: 'Magma Studio',
+      topic: 'Politely follow up on invoice #1042, five days overdue.',
+      details:
+        'Amount: $4,800. The invoice was resent by email. Offer help if there is any issue.',
+      signature: 'Alex Morgan\nFinance · Acme',
+      tone: 'empatico',
+      length: 'curto',
+      language: 'en',
+    },
   },
 ];
 
-export const TRANSLATE_INSTRUCTION = {
-  toEnglish:
-    'Traduza o corpo do e-mail para inglês natural e profissional, mantendo nomes, números, formatação e a assinatura.',
-  toPortuguese:
-    'Traduza o corpo do e-mail para português do Brasil natural e profissional, mantendo nomes, números, formatação e a assinatura.',
-} as const;
+export function getPresets(locale: Locale): Preset[] {
+  return locale === 'pt-BR' ? PRESETS_PT : PRESETS_EN;
+}
+
+export function getDefaultBriefing(locale: Locale): Briefing {
+  return getPresets(locale)[0].briefing;
+}
+
+export const TONE_VALUES: Tone[] = [
+  'profissional',
+  'direto',
+  'amigavel',
+  'persuasivo',
+  'empatico',
+  'formal',
+];
+
+export const LENGTH_VALUES: EmailLength[] = ['curto', 'medio', 'longo'];
+
+export const LANGUAGE_VALUES: Language[] = ['pt-BR', 'en', 'es'];

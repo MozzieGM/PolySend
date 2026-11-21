@@ -23,7 +23,7 @@ import {
   Zap,
 } from 'lucide-react';
 import type { Briefing, Draft, Model, SessionStats } from '../types';
-import { REFINEMENTS, TRANSLATE_INSTRUCTION } from '../lib/presets';
+import { useI18n } from '../lib/i18n';
 import { formatDuration, formatRate } from '../lib/format';
 
 interface EmailCanvasProps {
@@ -47,24 +47,7 @@ interface EmailCanvasProps {
   onOpenModels: () => void;
 }
 
-const REFINEMENT_ICONS = {
-  curto: Minimize2,
-  formal: Scale,
-  persuasivo: Megaphone,
-  cordial: HeartHandshake,
-  cta: Target,
-} as const;
 
-function statusLabel(draft: Draft): string {
-  if (draft.status === 'error') return 'interrompido';
-  if (draft.status === 'streaming') {
-    if (draft.phase === 'connecting') return 'conectando';
-    if (draft.phase === 'thinking') return 'pensando';
-    return 'escrevendo ao vivo';
-  }
-  if (draft.status === 'ready') return 'rascunho pronto';
-  return 'rascunho vazio';
-}
 
 export function EmailCanvas({
   draft,
@@ -81,6 +64,7 @@ export function EmailCanvas({
   onNew,
   onOpenModels,
 }: EmailCanvasProps) {
+  const { locale, t } = useI18n();
   const [selection, setSelection] = useState<{ start: number; end: number; text: string } | null>(
     null,
   );
@@ -115,10 +99,67 @@ export function EmailCanvas({
 
   const translate =
     briefing.language === 'en'
-      ? { id: 'traduzir', label: 'Traduzir p/ português', instruction: TRANSLATE_INSTRUCTION.toPortuguese }
-      : { id: 'traduzir', label: 'Traduzir p/ inglês', instruction: TRANSLATE_INSTRUCTION.toEnglish };
+      ? {
+          label: t('refine.translateToPortuguese'),
+          instruction: t('refine.translateToPortugueseInstruction'),
+        }
+      : {
+          label: t('refine.translateToEnglish'),
+          instruction: t('refine.translateToEnglishInstruction'),
+        };
 
-  const refinements = [...REFINEMENTS, translate];
+  const refinements = [
+    {
+      id: 'shorter',
+      label: t('refine.shorter'),
+      instruction: t('refine.shorterInstruction'),
+      Icon: Minimize2,
+    },
+    {
+      id: 'formal',
+      label: t('refine.formal'),
+      instruction: t('refine.formalInstruction'),
+      Icon: Scale,
+    },
+    {
+      id: 'persuasive',
+      label: t('refine.persuasive'),
+      instruction: t('refine.persuasiveInstruction'),
+      Icon: Megaphone,
+    },
+    {
+      id: 'warmer',
+      label: t('refine.warmer'),
+      instruction: t('refine.warmerInstruction'),
+      Icon: HeartHandshake,
+    },
+    {
+      id: 'cta',
+      label: t('refine.cta'),
+      instruction: t('refine.ctaInstruction'),
+      Icon: Target,
+    },
+    {
+      id: 'translate',
+      label: translate.label,
+      instruction: translate.instruction,
+      Icon: Languages,
+    },
+  ];
+
+  const statusLabel =
+    draft.status === 'error'
+      ? t('email.status.interrupted')
+      : draft.status === 'streaming'
+        ? draft.phase === 'connecting'
+          ? t('email.status.connecting')
+          : draft.phase === 'thinking'
+            ? t('email.status.thinking')
+            : t('email.status.writing')
+        : draft.status === 'ready'
+          ? t('email.status.ready')
+          : t('email.status.empty');
+
   const canRefine = Boolean(draft.body) && !isStreaming;
   const showBody = Boolean(draft.body);
   const showControls = showBody || isStreaming;
@@ -142,8 +183,7 @@ export function EmailCanvas({
     onRewriteSelection({
       ...selection,
       instruction:
-        selectionInstruction.trim() ||
-        'Deixe este trecho mais claro e natural, mantendo o tom e o sentido.',
+        selectionInstruction.trim() || t('email.selectionDefaultInstruction'),
     });
     setSelection(null);
     setSelectionInstruction('');
@@ -173,14 +213,14 @@ export function EmailCanvas({
           <span className="chrome-divider" aria-hidden="true" />
           <span className={`draft-state draft-${draft.status}`}>
             <span className="draft-dot" aria-hidden="true" />
-            {statusLabel(draft)}
+            {statusLabel}
           </span>
         </div>
 
         <div className="email-chrome-right">
           <button type="button" className="model-chip" onClick={onOpenModels}>
             <Cpu size={13} strokeWidth={2.2} />
-            <span>{model?.name ?? 'Escolher modelo'}</span>
+            <span>{model?.name ?? t('email.modelChipFallback')}</span>
             <ChevronDown size={12} strokeWidth={2.4} />
           </button>
           <span className="chrome-divider" aria-hidden="true" />
@@ -189,8 +229,8 @@ export function EmailCanvas({
             className="icon-btn chrome-icon"
             onClick={handleCopy}
             disabled={!showBody}
-            title="Copiar e-mail completo"
-            aria-label="Copiar e-mail completo"
+            title={t('email.copyTitle')}
+            aria-label={t('email.copyAria')}
           >
             {copied ? <Check size={15} strokeWidth={2.4} /> : <Clipboard size={15} strokeWidth={2} />}
           </button>
@@ -199,8 +239,8 @@ export function EmailCanvas({
             className="icon-btn chrome-icon"
             onClick={onDownload}
             disabled={!showBody}
-            title="Baixar como .txt"
-            aria-label="Baixar e-mail como arquivo de texto"
+            title={t('email.downloadTitle')}
+            aria-label={t('email.downloadAria')}
           >
             <ArrowDownToLine size={15} strokeWidth={2} />
           </button>
@@ -209,8 +249,8 @@ export function EmailCanvas({
             className="icon-btn chrome-icon"
             onClick={onNew}
             disabled={!showBody && !draft.subject}
-            title="Novo rascunho"
-            aria-label="Limpar e começar um novo rascunho"
+            title={t('email.newTitle')}
+            aria-label={t('email.newAria')}
           >
             <Eraser size={15} strokeWidth={2} />
           </button>
@@ -220,25 +260,27 @@ export function EmailCanvas({
       <div className={`email-sheet ${draft.status === 'streaming' ? 'paper-live' : ''}`}>
         <div className="email-meta">
           <label className="email-meta-row">
-            <span className="email-meta-label">Para</span>
+            <span className="email-meta-label">{t('email.to')}</span>
             <input
               type="text"
               value={draft.to}
               onChange={(event) => onDraftChange({ to: event.target.value })}
-              placeholder="destinatário@empresa.com"
+              placeholder={t('email.toPlaceholder')}
               disabled={isStreaming}
               autoComplete="off"
             />
-            <span className="email-meta-time">agora</span>
+            <span className="email-meta-time">{t('email.now')}</span>
           </label>
           <label className="email-meta-row email-subject-row">
-            <span className="email-meta-label">Assunto</span>
+            <span className="email-meta-label">{t('email.subject')}</span>
             <input
               type="text"
               value={draft.subject}
               onChange={(event) => onDraftChange({ subject: event.target.value })}
               placeholder={
-                isStreaming && !draft.subject ? 'O assunto chega nos primeiros tokens…' : 'Assunto do e-mail'
+                isStreaming && !draft.subject
+                  ? t('email.subjectStreaming')
+                  : t('email.subjectPlaceholder')
               }
               disabled={isStreaming}
               autoComplete="off"
@@ -252,20 +294,21 @@ export function EmailCanvas({
               <span className="email-empty-icon">
                 <Mail size={22} strokeWidth={1.7} />
               </span>
-              <h3>Seu e-mail nasce aqui</h3>
+              <h3>{t('email.emptyTitle')}</h3>
               <p>
-                Preencha o briefing e clique em <strong>Gerar e-mail</strong>. A resposta é
-                escrita em tempo real, token a token.
+                {t('email.emptyBefore')}
+                <strong>{t('briefing.generate')}</strong>
+                {t('email.emptyAfter')}
               </p>
               <div className="email-empty-meta">
                 <span>
                   <Zap size={11} strokeWidth={2.4} />
-                  streaming SSE
+                  {t('email.emptyMetaStreaming')}
                 </span>
                 <i />
-                <span>opencode go</span>
+                <span>{t('email.emptyMetaEngine')}</span>
                 <i />
-                <span>editável</span>
+                <span>{t('email.emptyMetaEditable')}</span>
               </div>
             </div>
           )}
@@ -275,10 +318,10 @@ export function EmailCanvas({
               <div className="thinking-head">
                 <span className="live-dot" aria-hidden="true" />
                 {draft.phase === 'connecting'
-                  ? 'Conectando ao modelo…'
+                  ? t('email.thinkingConnecting')
                   : draft.phase === 'thinking'
-                    ? 'O modelo está pensando…'
-                    : 'Preparando as primeiras palavras…'}
+                    ? t('email.thinkingModel')
+                    : t('email.thinkingPreparing')}
               </div>
               <div className="ghost-lines" aria-hidden="true">
                 <span style={{ width: '86%' }} />
@@ -295,11 +338,11 @@ export function EmailCanvas({
               <span className="email-error-icon">
                 <AlertTriangle size={20} strokeWidth={1.9} />
               </span>
-              <h3>Não deu para gerar</h3>
-              <p>{draft.error ?? 'A geração foi interrompida.'}</p>
+              <h3>{t('email.errorTitle')}</h3>
+              <p>{draft.error ?? t('email.errorFallback')}</p>
               <button type="button" className="btn btn-paper" onClick={onGenerate}>
                 <RotateCcw size={14} strokeWidth={2.2} />
-                Tentar novamente
+                {t('email.retry')}
               </button>
             </div>
           )}
@@ -312,7 +355,7 @@ export function EmailCanvas({
                 value={draft.body}
                 onChange={(event) => onDraftChange({ body: event.target.value })}
                 onSelect={(event) => handleSelection(event.currentTarget)}
-                aria-label="Corpo do e-mail"
+                aria-label={t('email.bodyAria')}
                 spellCheck
               />
             ) : (
@@ -337,26 +380,24 @@ export function EmailCanvas({
         <div className="selection-bar">
           <div className="selection-info">
             <Highlighter size={13} strokeWidth={2.2} />
-            <span>
-              <strong>{selection.text.length}</strong> caracteres selecionados
-            </span>
+            <span>{t('email.selectionCount', { count: selection.text.length })}</span>
           </div>
           <input
             type="text"
             value={selectionInstruction}
             onChange={(event) => setSelectionInstruction(event.target.value)}
-            placeholder="Ex.: mais direto, foco no prazo, sem jargão…"
-            aria-label="Instrução para reescrever a seleção"
+            placeholder={t('email.selectionPlaceholder')}
+            aria-label={t('email.selectionAria')}
           />
           <button type="button" className="btn btn-small btn-primary" onClick={handleRewrite}>
-            Reescrever
+            {t('email.rewrite')}
           </button>
           <button
             type="button"
             className="icon-btn"
             onClick={() => setSelection(null)}
-            title="Cancelar seleção"
-            aria-label="Cancelar seleção"
+            title={t('email.cancelSelection')}
+            aria-label={t('email.cancelSelection')}
           >
             <X size={14} strokeWidth={2.2} />
           </button>
@@ -368,18 +409,18 @@ export function EmailCanvas({
           <div className="refine-head">
           <span className="refine-title">
             <Sparkles size={13} strokeWidth={2.2} />
-            Ajustar com IA
+            {t('email.refineTitle')}
           </span>
           <button type="button" className="text-btn" onClick={toggleMode} disabled={isStreaming}>
             {draft.mode === 'edit' ? (
               <>
                 <Eye size={14} strokeWidth={2} />
-                Ver formatado
+                {t('email.viewFormatted')}
               </>
             ) : (
               <>
                 <PenLine size={14} strokeWidth={2} />
-                Editar texto
+                {t('email.editText')}
               </>
             )}
           </button>
@@ -387,8 +428,7 @@ export function EmailCanvas({
 
         <div className="refine-chips">
           {refinements.map((refinement) => {
-            const Icon =
-              REFINEMENT_ICONS[refinement.id as keyof typeof REFINEMENT_ICONS] ?? Languages;
+            const Icon = refinement.Icon;
             return (
               <button
                 key={refinement.id}
@@ -396,7 +436,7 @@ export function EmailCanvas({
                 className="refine-chip"
                 onClick={() => onRefine(refinement.instruction)}
                 disabled={!canRefine}
-                title={`Streaming: ${refinement.label}`}
+                title={t('email.streamingTitle', { label: refinement.label })}
               >
                 <Icon size={13} strokeWidth={2} />
                 {refinement.label}
@@ -406,9 +446,7 @@ export function EmailCanvas({
         </div>
 
           <p className="refine-hint">
-            {draft.mode === 'edit'
-              ? 'Selecione um trecho no texto para reescrever apenas ele — sem refazer o e-mail inteiro.'
-              : 'Clique em “Editar texto” para ajustar manualmente ou selecionar um trecho.'}
+            {draft.mode === 'edit' ? t('email.refineHintEdit') : t('email.refineHintView')}
           </p>
         </div>
       )}
@@ -417,7 +455,7 @@ export function EmailCanvas({
         <div className="email-foot">
           <span className="foot-left">
             <Cpu size={12} strokeWidth={2} />
-            {model?.name ?? 'nenhum modelo'}
+            {model?.name ?? t('email.noModel')}
             {model && !model.free && (
               <span className="foot-price">${model.price.output.toFixed(2)}/M out</span>
             )}
@@ -426,7 +464,7 @@ export function EmailCanvas({
             {isStreaming ? (
               <span className="foot-live">
                 <span className="live-dot" aria-hidden="true" />
-                recebendo tokens…
+                {t('email.receivingTokens')}
               </span>
             ) : stats.runs > 0 ? (
               <>
@@ -434,12 +472,17 @@ export function EmailCanvas({
                 <i />
                 <span>{formatRate(stats.lastTps)}</span>
                 <i />
-                <span>TTFT {formatDuration(stats.lastTtftMs)}</span>
+                <span>
+                  {t('email.ttft')} {formatDuration(stats.lastTtftMs)}
+                </span>
                 <i />
-                <span>{(stats.inputTokens + stats.outputTokens).toLocaleString('pt-BR')} tok</span>
+                <span>
+                  {(stats.inputTokens + stats.outputTokens).toLocaleString(locale)}{' '}
+                  {t('email.tokens')}
+                </span>
               </>
             ) : (
-              <span>aguardando a primeira geração</span>
+              <span>{t('email.waitingFirst')}</span>
             )}
           </span>
         </div>

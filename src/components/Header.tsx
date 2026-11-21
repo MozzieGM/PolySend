@@ -2,12 +2,14 @@ import {
   BookOpen,
   Gauge,
   KeyRound,
+  Languages,
   LayoutGrid,
   Radio,
   Send,
 } from 'lucide-react';
 import type { ConnectionState, KeySource, Plan } from '../types';
 import { formatPercent } from '../lib/format';
+import { useI18n, type MessageKey } from '../lib/i18n';
 import { PLAN_LABELS } from '../lib/models';
 
 interface HeaderProps {
@@ -20,17 +22,17 @@ interface HeaderProps {
   onOpenModels: () => void;
 }
 
-const STATUS_LABEL: Record<ConnectionState, string> = {
-  loading: 'Conectando',
-  ready: 'Go conectado',
-  error: 'Falha na conexão',
-  nokey: 'API não configurada',
+const STATUS_KEYS: Record<ConnectionState, MessageKey> = {
+  loading: 'header.status.loading',
+  ready: 'header.status.ready',
+  error: 'header.status.error',
+  nokey: 'header.status.nokey',
 };
 
-const SOURCE_LABEL: Record<KeySource, string> = {
-  server: '.env do servidor',
-  client: 'chave do painel',
-  none: 'configurar',
+const SOURCE_KEYS: Record<KeySource, MessageKey> = {
+  server: 'header.source.server',
+  client: 'header.source.client',
+  none: 'header.source.none',
 };
 
 export function Header({
@@ -42,7 +44,10 @@ export function Header({
   onOpenKey,
   onOpenModels,
 }: HeaderProps) {
+  const { locale, setLocale, t } = useI18n();
   const percent = monthlyPercent ?? 0;
+  const statusLabel = t(STATUS_KEYS[connection]);
+  const sourceLabel = t(SOURCE_KEYS[keySource]);
 
   return (
     <header className="topbar">
@@ -68,20 +73,20 @@ export function Header({
             type="button"
             className={`status-pill status-${connection}`}
             onClick={onOpenKey}
-            title="Configurar a chave da API"
-            aria-label={`Status da API: ${STATUS_LABEL[connection]}. Configurar chave.`}
+            title={t('header.configure')}
+            aria-label={t('header.statusAria', { status: statusLabel })}
           >
             <span className="status-dot" aria-hidden="true" />
-            <span className="status-label">{STATUS_LABEL[connection]}</span>
+            <span className="status-label">{statusLabel}</span>
             <span className="status-divider" aria-hidden="true" />
-            <span className="status-source">{SOURCE_LABEL[keySource]}</span>
+            <span className="status-source">{sourceLabel}</span>
           </button>
 
-          <div className="plan-pill" title="Consumo mensal do plano Go">
+          <div className="plan-pill" title={t('header.planTitle')}>
             <Gauge size={14} strokeWidth={2.2} />
             <span className="plan-pill-label">{PLAN_LABELS[plan]}</span>
             <span className="plan-pill-percent">{formatPercent(monthlyPercent)}</span>
-            <span className="plan-pill-caption">do mês</span>
+            <span className="plan-pill-caption">{t('header.planCaption')}</span>
             <span className="plan-pill-meter" aria-hidden="true">
               <i style={{ width: `${Math.min(100, Math.max(0, percent))}%` }} />
             </span>
@@ -89,7 +94,7 @@ export function Header({
 
           <button type="button" className="btn btn-ghost models-toggle" onClick={onOpenModels}>
             <LayoutGrid size={15} strokeWidth={2} />
-            <span>Modelos</span>
+            <span>{t('header.models')}</span>
             <span className="btn-count">{modelCount}</span>
           </button>
 
@@ -97,10 +102,21 @@ export function Header({
             type="button"
             className="btn btn-key"
             onClick={onOpenKey}
-            aria-label="Configurar API"
+            aria-label={t('header.configure')}
           >
             <KeyRound size={15} strokeWidth={2} />
-            <span className="key-btn-label">Configurar API</span>
+            <span className="key-btn-label">{t('header.configure')}</span>
+          </button>
+
+          <button
+            type="button"
+            className="lang-toggle"
+            onClick={() => setLocale(locale === 'en' ? 'pt-BR' : 'en')}
+            title={t('header.switchLanguage')}
+            aria-label={t('header.switchLanguage')}
+          >
+            <Languages size={14} strokeWidth={2} />
+            <span>{locale === 'en' ? 'EN' : 'PT'}</span>
           </button>
 
           <a
@@ -108,8 +124,8 @@ export function Header({
             href="https://opencode.ai/docs/console/go"
             target="_blank"
             rel="noreferrer"
-            title="Documentação do OpenCode Go"
-            aria-label="Abrir documentação do OpenCode Go"
+            title={t('header.docsTitle')}
+            aria-label={t('header.docsAria')}
           >
             <BookOpen size={16} strokeWidth={2} />
           </a>

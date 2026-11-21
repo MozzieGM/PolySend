@@ -1,4 +1,5 @@
 export type Plan = 'go' | 'go-plus' | 'go-teams';
+export type Locale = 'en' | 'pt-BR';
 export type Tone = 'profissional' | 'direto' | 'amigavel' | 'persuasivo' | 'empatico' | 'formal';
 export type EmailLength = 'curto' | 'medio' | 'longo';
 export type Language = 'pt-BR' | 'en' | 'es';

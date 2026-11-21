@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import type { KeySource, Model, Plan } from '../types';
 import { formatRelative, formatTokens, formatUSD } from '../lib/format';
+import { useI18n, type MessageKey } from '../lib/i18n';
 import { PLAN_LABELS, PLAN_PRICES, monthlyLimit } from '../lib/models';
 
 type Filter = 'todos' | 'destaques' | 'gratis' | 'zdr';
@@ -31,11 +32,11 @@ interface ModelsPanelProps {
   onClose?: () => void;
 }
 
-const FILTERS: { id: Filter; label: string }[] = [
-  { id: 'todos', label: 'Todos' },
-  { id: 'destaques', label: 'Destaques' },
-  { id: 'gratis', label: 'Grátis' },
-  { id: 'zdr', label: 'ZDR' },
+const FILTERS: { id: Filter; key: MessageKey }[] = [
+  { id: 'todos', key: 'models.filter.all' },
+  { id: 'destaques', key: 'models.filter.featured' },
+  { id: 'gratis', key: 'models.filter.free' },
+  { id: 'zdr', key: 'models.filter.zdr' },
 ];
 
 export function ModelsPanel({
@@ -54,6 +55,7 @@ export function ModelsPanel({
   onOpenKey,
   onClose,
 }: ModelsPanelProps) {
+  const { locale, t } = useI18n();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('todos');
 
@@ -73,13 +75,14 @@ export function ModelsPanel({
   }, [models, filter, query]);
 
   const planLabel = PLAN_LABELS[plan];
+  const planPrice = PLAN_PRICES[plan][locale];
 
   return (
     <aside className={`panel models-panel ${isDrawer ? 'is-drawer' : ''}`}>
       <div className="models-head">
         <div>
-          <span className="eyebrow">03 · catálogo ao vivo</span>
-          <h2>Modelos Go</h2>
+          <span className="eyebrow">{t('models.eyebrow')}</span>
+          <h2>{t('models.title')}</h2>
         </div>
         <div className="models-head-actions">
           <span className={`live-tag ${loading ? 'is-loading' : ''}`}>
@@ -91,8 +94,8 @@ export function ModelsPanel({
             className={`icon-btn ${loading ? 'is-spinning' : ''}`}
             onClick={onRefresh}
             disabled={loading || !hasKey}
-            title="Atualizar catálogo em tempo real"
-            aria-label="Atualizar catálogo de modelos"
+            title={t('models.refresh')}
+            aria-label={t('models.refreshAria')}
           >
             <RefreshCw size={15} strokeWidth={2} />
           </button>
@@ -101,8 +104,8 @@ export function ModelsPanel({
               type="button"
               className="icon-btn drawer-close"
               onClick={onClose}
-              title="Fechar catálogo"
-              aria-label="Fechar catálogo"
+              title={t('key.close')}
+              aria-label={t('key.close')}
             >
               <X size={16} strokeWidth={2.2} />
             </button>
@@ -114,13 +117,13 @@ export function ModelsPanel({
         <div className="plan-switcher-head">
           <span>
             <SlidersHorizontal size={12} strokeWidth={2.2} />
-            Limite mensal por modelo
+            {t('models.planLimit')}
           </span>
           <span className="plan-name">
-            {planLabel} · {PLAN_PRICES[plan]}
+            {planLabel} · {planPrice}
           </span>
         </div>
-        <div className="segmented plan-segmented" role="group" aria-label="Plano Go">
+        <div className="segmented plan-segmented" role="group" aria-label={t('models.planAria')}>
           {(['go', 'go-plus', 'go-teams'] as Plan[]).map((option) => (
             <button
               key={option}
@@ -133,10 +136,7 @@ export function ModelsPanel({
             </button>
           ))}
         </div>
-        <p className="plan-caption">
-          Preços base por 1M de tokens. O limite mensal vale se você usar só este modelo — o
-          consumo é compartilhado.
-        </p>
+        <p className="plan-caption">{t('models.planNote')}</p>
       </div>
 
       {!hasKey ? (
@@ -144,11 +144,11 @@ export function ModelsPanel({
           <span className="models-empty-icon">
             <KeyRound size={20} strokeWidth={1.9} />
           </span>
-          <h3>Conecte a API</h3>
-          <p>Cole sua chave do OpenCode Go para carregar os modelos e os preços ao vivo.</p>
+          <h3>{t('models.connectTitle')}</h3>
+          <p>{t('models.connectBody')}</p>
           <button type="button" className="btn btn-primary btn-small" onClick={onOpenKey}>
             <KeyRound size={13} strokeWidth={2.2} />
-            Configurar API
+            {t('models.connectButton')}
           </button>
         </div>
       ) : error ? (
@@ -157,10 +157,10 @@ export function ModelsPanel({
           <div className="models-error-actions">
             <button type="button" className="btn btn-small btn-ghost" onClick={onRefresh}>
               <RefreshCw size={13} strokeWidth={2.2} />
-              Tentar de novo
+              {t('models.retry')}
             </button>
             <button type="button" className="text-btn" onClick={onOpenKey}>
-              Trocar chave
+              {t('models.changeKey')}
             </button>
           </div>
         </div>
@@ -174,21 +174,21 @@ export function ModelsPanel({
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar modelo…"
-                aria-label="Buscar modelo"
+                placeholder={t('models.searchPlaceholder')}
+                aria-label={t('models.searchAria')}
               />
               {query && (
                 <button
                   type="button"
                   className="search-clear"
                   onClick={() => setQuery('')}
-                  aria-label="Limpar busca"
+                  aria-label={t('models.clearSearch')}
                 >
                   <X size={12} strokeWidth={2.4} />
                 </button>
               )}
             </label>
-            <div className="filter-row" role="group" aria-label="Filtrar modelos">
+            <div className="filter-row" role="group" aria-label={t('models.filtersAria')}>
               {FILTERS.map((option) => (
                 <button
                   key={option.id}
@@ -197,13 +197,13 @@ export function ModelsPanel({
                   aria-pressed={filter === option.id}
                   onClick={() => setFilter(option.id)}
                 >
-                  {option.label}
+                  {t(option.key)}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="model-list" role="listbox" aria-label="Modelos do OpenCode Go">
+          <div className="model-list" role="listbox" aria-label={t('models.listAria')}>
             {loading && models.length === 0
               ? Array.from({ length: 6 }, (_, index) => (
                   <div className="model-skeleton" key={index} aria-hidden="true">
@@ -232,14 +232,18 @@ export function ModelsPanel({
                               className="model-star"
                               size={11}
                               strokeWidth={2.4}
-                              aria-label="Modelo em destaque"
+                              aria-label={t('models.featuredAria')}
                             />
                           )}
                           {model.name}
                         </span>
                         <span className="model-item-badges">
-                          {model.free && <span className="mini-badge free">grátis</span>}
-                          {model.go.zdr && <span className="mini-badge zdr">zdr</span>}
+                          {model.free && (
+                            <span className="mini-badge free">{t('models.badgeFree')}</span>
+                          )}
+                          {model.go.zdr && (
+                            <span className="mini-badge zdr">{t('models.badgeZdr')}</span>
+                          )}
                         </span>
                         <span className={`model-radio ${selected ? 'is-selected' : ''}`}>
                           {selected && <Check size={10} strokeWidth={3} />}
@@ -260,17 +264,20 @@ export function ModelsPanel({
                       </span>
                       <span className="model-item-limit">
                         {model.free
-                          ? 'não consome o plano'
+                          ? t('models.limitFree')
                           : limit != null
-                            ? `${formatUSD(limit, 0)}/mês no ${planLabel}`
-                            : 'limite não informado'}
+                            ? t('models.limitPerMonth', {
+                                price: formatUSD(limit, 0),
+                                plan: planLabel,
+                              })
+                            : t('models.limitUnknown')}
                       </span>
                     </button>
                   );
                 })}
             {!loading && filtered.length === 0 && (
               <div className="models-no-results">
-                <p>Nenhum modelo encontrado com esse filtro.</p>
+                <p>{t('models.noResults')}</p>
                 <button
                   type="button"
                   className="text-btn"
@@ -279,7 +286,7 @@ export function ModelsPanel({
                     setFilter('todos');
                   }}
                 >
-                  Limpar filtros
+                  {t('models.clearFilters')}
                 </button>
               </div>
             )}
@@ -287,12 +294,18 @@ export function ModelsPanel({
 
           <div className="models-foot">
             <span>
-              {filtered.length} de {models.length} · {formatRelative(fetchedAt)}
+              {t('models.count', {
+                filtered: filtered.length,
+                total: models.length,
+              })}{' '}
+              · {formatRelative(fetchedAt, locale)}
               {source !== 'none' && (
-                <em>{source === 'server' ? 'via .env' : 'via painel'}</em>
+                <em>
+                  {source === 'server' ? t('models.viaEnv') : t('models.viaPanel')}
+                </em>
               )}
             </span>
-            <span className="models-foot-api">go/v1/models</span>
+            <span className="models-foot-api">{t('models.apiLabel')}</span>
           </div>
         </>
       )}

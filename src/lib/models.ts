@@ -1,4 +1,4 @@
-import type { Model, Plan } from '../types';
+import type { Locale, Model, Plan } from '../types';
 
 export function monthlyLimit(model: Model | null | undefined, plan: Plan): number | null {
   if (!model?.go.monthlyUsage) return null;
@@ -22,8 +22,8 @@ export const PLAN_LABELS: Record<Plan, string> = {
   'go-teams': 'Go Teams',
 };
 
-export const PLAN_PRICES: Record<Plan, string> = {
-  go: '$10/mês',
-  'go-plus': '$40/mês',
-  'go-teams': '$20/membro/mês',
+export const PLAN_PRICES: Record<Plan, Record<Locale, string>> = {
+  go: { en: '$10/mo', 'pt-BR': '$10/mês' },
+  'go-plus': { en: '$40/mo', 'pt-BR': '$40/mês' },
+  'go-teams': { en: '$20/member/mo', 'pt-BR': '$20/membro/mês' },
 };
