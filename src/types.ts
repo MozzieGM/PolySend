@@ -59,8 +59,66 @@ export interface GoUsage {
 export interface Health {
   ok: boolean;
   serverKeyConfigured: boolean;
+  resendKeyConfigured?: boolean;
+  resendProvider?: string;
+  resendDefaults?: {
+    fromName?: string | null;
+    fromEmail?: string | null;
+    replyTo?: string | null;
+  };
   apiBase: string;
   fetchedAt: string;
+}
+
+export interface ResendDomain {
+  id: string;
+  name: string;
+  status: string;
+  region: string | null;
+  createdAt: string | null;
+  openTracking?: boolean;
+  clickTracking?: boolean;
+  capabilities?: {
+    sending?: string;
+    receiving?: string;
+  } | null;
+}
+
+export interface DeliveryStatus {
+  provider: 'resend';
+  configured: boolean;
+  valid: boolean;
+  keySource: KeySource;
+  restricted: boolean;
+  domains: ResendDomain[];
+  defaults: {
+    fromName: string;
+    fromEmail: string | null;
+    replyTo: string | null;
+  };
+}
+
+export interface DeliveryHistoryItem {
+  id: string;
+  provider: string;
+  keySource: KeySource;
+  to: string;
+  from: string;
+  subject: string;
+  createdAt: string;
+  status: string;
+  lastEvent: string | null;
+  lastCheckedAt?: string;
+}
+
+export interface DeliverySendPayload {
+  to: string;
+  fromName: string;
+  fromEmail: string;
+  replyTo?: string | null;
+  subject: string;
+  text: string;
+  idempotencyKey?: string;
 }
 
 export interface Briefing {

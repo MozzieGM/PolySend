@@ -17,6 +17,7 @@ import {
   PenLine,
   RotateCcw,
   Scale,
+  Send,
   Sparkles,
   Target,
   X,
@@ -45,6 +46,7 @@ interface EmailCanvasProps {
   onDownload: () => void;
   onNew: () => void;
   onOpenModels: () => void;
+  onSend: () => void;
 }
 
 
@@ -63,6 +65,7 @@ export function EmailCanvas({
   onDownload,
   onNew,
   onOpenModels,
+  onSend,
 }: EmailCanvasProps) {
   const { locale, t } = useI18n();
   const [selection, setSelection] = useState<{ start: number; end: number; text: string } | null>(
@@ -224,6 +227,17 @@ export function EmailCanvas({
             <ChevronDown size={12} strokeWidth={2.4} />
           </button>
           <span className="chrome-divider" aria-hidden="true" />
+          <button
+            type="button"
+            className="btn btn-send-email"
+            onClick={onSend}
+            disabled={!showBody || isStreaming}
+            title={t('email.sendTitle')}
+            aria-label={t('email.sendAria')}
+          >
+            <Send size={13} strokeWidth={2.2} />
+            <span>{t('email.send')}</span>
+          </button>
           <button
             type="button"
             className="icon-btn chrome-icon"

@@ -19,8 +19,11 @@ O catálogo Go ao vivo (31 modelos no momento) mostra preços por 1M de tokens, 
 modelo e o consumo real do plano (janela de 5h, semana e mês). O texto é transmitido token a
 token por SSE e pode ser editado, refinado ou reescrito por seleção.
 
+Quando o rascunho estiver pronto, **Enviar** entrega um e-mail de verdade pelo **Resend**, com
+identidade de remetente, verificação de domínio, envio de teste e histórico por sessão no app.
+
 ```
-React + Vite  ·  Node/Express  ·  OpenCode Go API  ·  SSE
+React + Vite  ·  Node/Express  ·  OpenCode Go API  ·  SSE  ·  Resend
 ```
 
 ## Rodar
@@ -87,8 +90,90 @@ Abre em `http://localhost:8787` (Express serve o build do Vite e as rotas `/api`
 5. Use **Mais curto** e **Traduzir p/ inglês** para mostrar refinamento sobre um texto existente.
 6. Abra **Configurar API**, cole a chave do seu amigo e mostre a validação ao vivo (o catálogo
    recarrega na hora).
-7. Para fechar, abra o **Console** pelo link da barra de consumo ou mostre
+7. Abra **Envio › Configurações**, conecte uma chave do Resend e mostre o domínio verificado e o
+   remetente. Depois use **Enviar** no e-mail, revise o destinatário e entregue o rascunho de
+   verdade. Mostre o ID do Resend e o evento de entrega no histórico.
+8. Para fechar, abra o **Console** pelo link da barra de consumo ou mostre
    `https://opencode.ai/console/go` com as janelas reais.
+
+## Enviar com o Resend
+
+O envio é uma **camada de provider** em `server/delivery/`. O Resend é o primeiro adaptador;
+SMTP, Amazon SES e outros podem entrar atrás das mesmas rotas sem mexer no estúdio de e-mails.
+
+### 1. Conectar uma chave do Resend
+
+Crie a chave em <https://resend.com/api-keys> e escolha:
+
+- abrir **Envio › Configurações** no app, colar a chave e clicar em **Validar e conectar**; ou
+- colocar a chave no `.env` como `RESEND_API_KEY`.
+
+A chave do painel fica só no `sessionStorage` daquela aba e é repassada ao backend local pelo
+header `x-resend-key`. Ela nunca é gravada em disco. A chave do servidor serve de fallback e o
+painel pode voltar para ela quando quiser.
+
+Os dois tipos de chave funcionam:
+
+| Tipo de chave | O que habilita |
+| ------------- | -------------- |
+| **Acesso total** | Envio, listagem de domínios, verificação de domínio e atualização de status |
+| **Somente envio** | Envio, e-mail de teste e histórico; domínios e status ficam ocultos porque o Resend bloqueia essas leituras |
+
+### 2. Verificar um domínio e escolher o remetente
+
+O Resend só entrega a partir de um **domínio verificado**. Adicione o domínio em
+<https://resend.com/domains>, publique os registros DNS que o Resend mostrar, use **Domínios de
+envio › Verificar** no painel e atualize. O endereço `onboarding@resend.dev` serve para testes
+rápidos, mas só chega ao e-mail do dono da conta Resend.
+
+Em **Identidade do remetente**, defina o nome de exibição, o endereço **De** em um domínio
+verificado e um **Responder para** opcional. O painel sugere endereços para cada domínio
+verificado. Essas preferências ficam no navegador (`localStorage`), não no servidor.
+
+### 3. Enviar e acompanhar
+
+- A ação **Enviar** no papel do e-mail abre **Envio › Enviar** com o destinatário preenchido a
+  partir do briefing quando ele contém um e-mail.
+- Marque **Revisei o conteúdo** e clique em **Enviar e-mail**. O assunto e o corpo do rascunho
+  vão como HTML e como alternativa em texto puro.
+- Após o aceite, o ID do Resend aparece e pode ser copiado com um clique. A aba
+  **Configurações** guarda os últimos envios da sessão; use atualizar para ler o evento mais
+  recente (`delivered`, `bounced`, `complained`, `delivery_delayed` etc.) no Resend.
+- **E-mail de teste** envia uma mensagem pequena e fixa com o remetente e a chave atuais, útil
+  antes de uma demo ao vivo.
+
+### Entregabilidade e proteções
+
+- O texto puro é convertido em HTML simples com estilos inline, **sem pixel de rastreamento,
+  sem imagens remotas e sem reescrita de links**, o que ajuda a manter a mensagem fora de
+  filtros de spam.
+- Toda mensagem leva uma parte em texto puro, um `Reply-To` normal e o header
+  `Idempotency-Key`, que evita envio duplicado em retentativas.
+- O domínio do **De** é comparado com a lista de domínios verificados; um aviso aparece quando o
+  remetente não corresponde a nenhum.
+- Os envios são limitados no servidor por sessão e IP (`RESEND_SEND_LIMIT_PER_HOUR`, padrão
+  **20/hora**). E-mails de teste contam no limite.
+- Erros do provider voltam com código estável, mensagem legível e o detalhe bruto em
+  **Detalhes do provider**.
+
+Padrões opcionais no `.env`:
+
+```dotenv
+RESEND_API_KEY=
+RESEND_FROM_NAME=PolySend
+RESEND_FROM_EMAIL=hello@seudominio.com
+RESEND_REPLY_TO=voce@seudominio.com
+RESEND_SEND_LIMIT_PER_HOUR=20
+# Use apenas para mocks/testes locais
+RESEND_BASE_URL=https://api.resend.com
+```
+
+### Adicionar outro provider
+
+Crie um adaptador em `server/delivery/` com as mesmas operações usadas por
+`server/delivery/resend.mjs` (validar chave, listar/verificar domínios, enviar, consultar
+status) e selecione-o nas rotas de envio. A interface já mostra o nome do provider, então um
+segundo adaptador entra sem alterar o estúdio.
 
 ## Arquitetura
 
@@ -103,25 +188,39 @@ src/
     ModelsPanel.tsx       catálogo Go ao vivo, busca, filtros e planos
     MobileTabs.tsx        navegação Briefing / E-mail / Modelos no celular
     KeyModal.tsx          configuração da API pelo painel
+    DeliveryModal.tsx     chave do Resend, domínios, remetente, teste e histórico
   lib/
     api.ts                fetch + parser SSE
+    delivery.ts           helpers da API de envio e parsing de e-mail
     i18n.tsx              dicionários EN/PT + provider de idioma
     errors.ts             tradução de erros da API/stream por código
     presets.ts            briefings, tons, extensões e idiomas localizados
 server/
-  index.mjs               rotas Express, SSE e validação
+  index.mjs               rotas Express, SSE, validação e rotas de envio
   opencode.mjs            cliente da API Go (modelos, usage, chat completions)
   prompts.mjs             prompts de geração, refinamento e seleção
+  delivery/
+    resend.mjs            adaptador REST do Resend, chave, envio e status
+    templates.mjs         template HTML inline a partir do texto puro
+    store.mjs             histórico de envios por sessão
 ```
 
 ### Endpoints do backend
 
 | Método | Rota                | O que faz |
 | ------ | ------------------- | --------- |
-| GET    | `/api/health`       | status do servidor e se há chave no `.env` |
+| GET    | `/api/health`       | status do servidor, chave Go e padrões do Resend |
 | GET    | `/api/models`       | catálogo Go normalizado (usa a chave do `.env` ou `x-opencode-key`) |
 | GET    | `/api/usage`        | janelas reais de consumo do plano Go |
 | POST   | `/api/email/stream` | gera/refina e transmite SSE (`subject`, `delta`, `usage`, `done`, `error`) |
+| GET    | `/api/delivery/status` | valida a chave do Resend e retorna domínios, escopos e padrões |
+| POST   | `/api/delivery/domains/:id/verify` | pede ao Resend para reverificar o DNS do domínio |
+| POST   | `/api/delivery/send` | envia o rascunho revisado e registra no histórico da sessão |
+| GET    | `/api/delivery/history` | lista os envios da sessão atual |
+| GET    | `/api/delivery/history/:id` | atualiza o último evento de um envio no Resend |
+
+As rotas de envio pegam a chave de `x-resend-key` (painel) ou `RESEND_API_KEY` (servidor) e a
+sessão de `x-session-id`.
 
 O cliente escolhe o modelo, o briefing e o modo (`generate`, `refine` ou `selection`). O
 backend monta os prompts e chama `https://opencode.ai/inference/go/openai/v1/chat/completions`
@@ -142,16 +241,17 @@ estável, mas geração de e-mails não é o caso de uso principal do Go. Para u
 o caminho recomendado é usar **OpenCode Models pay-as-you-go** ou as chaves dos seus próprios
 providers. Para a demo ao vivo com amigos, o Go funciona bem.
 
-## Chave de API e segurança
+## Chaves de API e segurança
 
-- A chave do `.env` fica **somente no backend** e nunca é enviada ao navegador.
-- A chave colada no painel fica no `sessionStorage` daquela aba e é enviada ao **seu backend
-  local** apenas nas requisições; o servidor não grava a chave em disco.
-- Para produção, mantenha a chave só no servidor e remova a possibilidade de o cliente enviar
-  `x-opencode-key` (ou proteja o app com autenticação). Este projeto é uma demo local: não
-  exponha o servidor publicamente sem autenticação/rate limit.
-- `.env` está no `.gitignore`. Não faça commit da sua chave. Se ela vazar, revogue e crie outra
-  no Console em **Account › Personal API keys**.
+- As chaves do OpenCode e do Resend podem ficar no `.env` e permanecem **somente no backend**;
+  nunca são enviadas ao navegador.
+- Chaves coladas nos painéis ficam no `sessionStorage` daquela aba e são enviadas ao **seu
+  backend local** apenas na requisição que precisa delas; o servidor não grava em disco.
+- Para produção, mantenha as chaves só no servidor e remova a possibilidade de o cliente enviar
+  `x-opencode-key` / `x-resend-key` (ou proteja o app com autenticação). Este projeto é uma demo
+  local: não exponha o servidor publicamente sem autenticação/rate limit.
+- `.env` está no `.gitignore`. Não faça commit das suas chaves. Se uma vazar, revogue e crie
+  outra: OpenCode Console em **Account › Personal API keys**, Resend em **API Keys**.
 
 ## Ajustes rápidos
 
@@ -168,3 +268,5 @@ providers. Para a demo ao vivo com amigos, o Go funciona bem.
 - API de inferência: <https://opencode.ai/docs/console/api/inference>
 - Lista de modelos: <https://opencode.ai/docs/console/api/models>
 - Console: <https://opencode.ai/console>
+- API do Resend: <https://resend.com/docs/api-reference/introduction>
+- Domínios no Resend: <https://resend.com/docs/dashboard/domains/introduction>

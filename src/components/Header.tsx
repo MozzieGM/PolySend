@@ -4,6 +4,7 @@ import {
   KeyRound,
   Languages,
   LayoutGrid,
+  MailCheck,
   Radio,
   Send,
 } from 'lucide-react';
@@ -18,8 +19,10 @@ interface HeaderProps {
   modelCount: number;
   monthlyPercent: number | null;
   plan: Plan;
+  deliveryConfigured: boolean;
   onOpenKey: () => void;
   onOpenModels: () => void;
+  onOpenDelivery: () => void;
 }
 
 const STATUS_KEYS: Record<ConnectionState, MessageKey> = {
@@ -41,8 +44,10 @@ export function Header({
   modelCount,
   monthlyPercent,
   plan,
+  deliveryConfigured,
   onOpenKey,
   onOpenModels,
+  onOpenDelivery,
 }: HeaderProps) {
   const { locale, setLocale, t } = useI18n();
   const percent = monthlyPercent ?? 0;
@@ -106,6 +111,21 @@ export function Header({
           >
             <KeyRound size={15} strokeWidth={2} />
             <span className="key-btn-label">{t('header.configure')}</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-delivery"
+            onClick={onOpenDelivery}
+            title={t('header.deliveryTitle')}
+            aria-label={t('header.deliveryAria')}
+          >
+            <MailCheck size={15} strokeWidth={2} />
+            <span className="delivery-btn-label">{t('header.delivery')}</span>
+            <span
+              className={`delivery-status-dot ${deliveryConfigured ? 'is-on' : ''}`}
+              aria-hidden="true"
+            />
           </button>
 
           <button

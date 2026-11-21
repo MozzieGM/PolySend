@@ -5,6 +5,7 @@ import { EmailCanvas } from './components/EmailCanvas';
 import { ModelsPanel } from './components/ModelsPanel';
 import { UsageBar } from './components/UsageBar';
 import { MobileTabs, type MobileTab } from './components/MobileTabs';
+import { DeliveryModal } from './components/DeliveryModal';
 import { KeyModal } from './components/KeyModal';
 import { Toast, type ToastData, type ToastTone } from './components/Toast';
 import {
@@ -36,6 +37,7 @@ import type {
 } from './types';
 
 const KEY_STORAGE = 'oc_live_api_key';
+const RESEND_KEY_STORAGE = 'polysend_resend_key';
 const MODEL_STORAGE = 'oc_live_model';
 const PLAN_STORAGE = 'oc_live_plan';
 
@@ -107,6 +109,9 @@ export default function App() {
   const isWide = useMediaQuery('(min-width: 1360px)');
   const isMobile = useMediaQuery('(max-width: 900px)');
   const [storedKey, setStoredKey] = useState(() => readStorage('session', KEY_STORAGE));
+  const [resendKey, setResendKey] = useState(() =>
+    readStorage('session', RESEND_KEY_STORAGE),
+  );
   const [health, setHealth] = useState<Health | null>(null);
   const [connection, setConnection] = useState<ConnectionState>('loading');
   const [models, setModels] = useState<Model[]>([]);
@@ -127,6 +132,8 @@ export default function App() {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [stats, setStats] = useState<SessionStats>(EMPTY_STATS);
   const [keyModalOpen, setKeyModalOpen] = useState(false);
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const [deliveryTab, setDeliveryTab] = useState<'send' | 'settings'>('settings');
   const [modelsDrawerOpen, setModelsDrawerOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>('briefing');
   const [toast, setToast] = useState<ToastData | null>(null);
@@ -743,6 +750,21 @@ export default function App() {
     }
   };
 
+  const handleOpenDelivery = () => {
+    setDeliveryTab('settings');
+    setDeliveryOpen(true);
+  };
+
+  const handleOpenSend = () => {
+    setDeliveryTab('send');
+    setDeliveryOpen(true);
+  };
+
+  const handleResendKeyChange = (key: string) => {
+    setResendKey(key);
+    writeStorage('session', RESEND_KEY_STORAGE, key);
+  };
+
   const handleSelectModel = (id: string) => {
     setSelectedId(id);
     if (isMobile) {
@@ -781,6 +803,8 @@ export default function App() {
         plan={plan}
         onOpenKey={() => setKeyModalOpen(true)}
         onOpenModels={handleOpenModels}
+        onOpenDelivery={handleOpenDelivery}
+        deliveryConfigured={Boolean(resendKey) || Boolean(health?.resendKeyConfigured)}
       />
 
       <main className={`layout ${isMobile ? 'is-mobile' : ''}`}>
@@ -824,6 +848,7 @@ export default function App() {
             onDownload={handleDownload}
             onNew={handleNewDraft}
             onOpenModels={handleOpenModels}
+            onSend={handleOpenSend}
           />
           <UsageBar
             usage={usage}
@@ -886,6 +911,17 @@ export default function App() {
         onConnect={handleConnectKey}
         onUseServer={handleUseServerKey}
         onDisconnect={handleDisconnect}
+      />
+
+      <DeliveryModal
+        open={deliveryOpen}
+        initialTab={deliveryTab}
+        draft={draft}
+        briefing={briefing}
+        resendKey={resendKey}
+        serverKeyConfigured={Boolean(health?.resendKeyConfigured)}
+        onClose={() => setDeliveryOpen(false)}
+        onKeyChange={handleResendKeyChange}
       />
 
       <Toast toast={toast} />

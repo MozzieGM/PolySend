@@ -11,28 +11,32 @@ import type {
 export class ApiError extends Error {
   status: number;
   code: string;
+  details?: string;
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, details?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
-async function parseError(response: Response): Promise<ApiError> {
+export async function parseApiError(response: Response): Promise<ApiError> {
   let code = 'request_failed';
   let message = 'Não foi possível concluir a requisição.';
+  let details: string | undefined;
   try {
     const body = await response.json();
     if (body?.error) {
       code = body.error.code ?? code;
       message = body.error.message ?? message;
+      if (typeof body.error.details === 'string') details = body.error.details;
     }
   } catch {
     /* keep defaults */
   }
-  return new ApiError(response.status, code, message);
+  return new ApiError(response.status, code, message, details);
 }
 
 function keyHeaders(key?: string): HeadersInit {
@@ -41,19 +45,19 @@ function keyHeaders(key?: string): HeadersInit {
 
 export async function fetchHealth(): Promise<Health> {
   const response = await fetch('/api/health');
-  if (!response.ok) throw await parseError(response);
+  if (!response.ok) throw await parseApiError(response);
   return response.json();
 }
 
 export async function fetchModels(key?: string): Promise<ModelsResponse> {
   const response = await fetch('/api/models', { headers: keyHeaders(key) });
-  if (!response.ok) throw await parseError(response);
+  if (!response.ok) throw await parseApiError(response);
   return response.json();
 }
 
 export async function fetchUsage(key?: string): Promise<GoUsage> {
   const response = await fetch('/api/usage', { headers: keyHeaders(key) });
-  if (!response.ok) throw await parseError(response);
+  if (!response.ok) throw await parseApiError(response);
   return response.json();
 }
 
@@ -120,7 +124,7 @@ export async function streamEmail(options: {
     signal,
   });
 
-  if (!response.ok) throw await parseError(response);
+  if (!response.ok) throw await parseApiError(response);
   if (!response.body) throw new ApiError(502, 'empty_stream', 'O servidor não retornou um stream.');
 
   const reader = response.body.getReader();

@@ -313,6 +313,165 @@ const en = {
   'errors.internal_error': 'Internal server error. Try again.',
   'errors.no_model':
     'No model selected. Choose one from the Go catalog.',
+
+  'header.delivery': 'Delivery',
+  'header.deliveryTitle': 'Resend delivery settings',
+  'header.deliveryAria': 'Open delivery settings',
+  'email.send': 'Send',
+  'email.sendTitle': 'Send this email with Resend',
+  'email.sendAria': 'Send this email',
+  'email.sent': 'Sent',
+
+  'delivery.eyebrow': 'delivery · resend',
+  'delivery.title': 'Send with Resend',
+  'delivery.tabs.send': 'Send',
+  'delivery.tabs.settings': 'Settings',
+  'delivery.provider': 'Provider',
+  'delivery.providerResend': 'Resend',
+  'delivery.providerNote':
+    'The provider layer is ready for SMTP, Amazon SES, and other adapters later.',
+  'delivery.connected': 'Connected',
+  'delivery.notConnected': 'Not connected',
+  'delivery.fullAccess': 'Full access',
+  'delivery.restricted': 'Send-only key',
+  'delivery.serverKey': 'Server .env key',
+  'delivery.panelKey': 'Panel key in this tab',
+  'delivery.loading': 'Loading…',
+  'delivery.retry': 'Try again',
+  'delivery.errorTitle': 'Something went wrong',
+  'delivery.providerDetails': 'Provider response',
+  'delivery.copyId': 'Copy ID',
+  'delivery.copied': 'Copied',
+  'delivery.keyTitle': 'Resend API key',
+  'delivery.keyHelp':
+    'A Full access key can list domains and delivery statuses. A sending-only key can still send emails.',
+  'delivery.keyPlaceholder': 're_...',
+  'delivery.keyValidate': 'Validate and connect',
+  'delivery.keyValidating': 'Validating…',
+  'delivery.keyUseServer': 'Use server key (.env)',
+  'delivery.keyRemove': 'Remove panel key',
+  'delivery.keyInvalid': 'Invalid Resend API key.',
+  'delivery.keyRequired': 'Connect a Resend API key to send.',
+  'delivery.keySection': 'Connection',
+  'delivery.openApiKeys': 'Resend API keys',
+  'delivery.connectTitle': 'Connect Resend to send real emails',
+  'delivery.connectBody':
+    'Paste a Resend API key in Settings. The key stays in this tab’s sessionStorage and is sent only to your backend.',
+  'delivery.connectButton': 'Open settings',
+  'delivery.domainsTitle': 'Sending domains',
+  'delivery.domainsRefresh': 'Refresh domains',
+  'delivery.domainsEmpty':
+    'No domains in this Resend account. Add and verify a domain before sending.',
+  'delivery.domainsRestricted':
+    'This key is send-only, so domains cannot be listed. Enter the sender manually or use a Full access key.',
+  'delivery.domainsHint':
+    'Only verified domains can be used in the From address.',
+  'delivery.addDomain': 'Add a domain in Resend',
+  'delivery.domainVerify': 'Verify',
+  'delivery.domainVerifying': 'Verifying…',
+  'delivery.domainVerifyStarted':
+    'Verification started. Refresh in a few seconds.',
+  'delivery.domainAria': 'Resend sending domains',
+  'delivery.domainStatus.verified': 'verified',
+  'delivery.domainStatus.pending': 'pending',
+  'delivery.domainStatus.not_started': 'not started',
+  'delivery.domainStatus.failed': 'failed',
+  'delivery.domainStatus.temporary_failure': 'checking',
+  'delivery.domainStatus.unknown': 'unknown',
+  'delivery.senderTitle': 'Sender identity',
+  'delivery.fromName': 'From name',
+  'delivery.fromEmail': 'From email',
+  'delivery.fromHint': 'Use an email on a verified Resend domain.',
+  'delivery.replyTo': 'Reply-To',
+  'delivery.replyHint': 'Optional, but use a mailbox you actually read.',
+  'delivery.autosave': 'Sender changes are saved in this browser.',
+  'delivery.reviewTitle': 'Review and send',
+  'delivery.to': 'To',
+  'delivery.toPlaceholder': 'recipient@company.com',
+  'delivery.from': 'From',
+  'delivery.subject': 'Subject',
+  'delivery.body': 'Body',
+  'delivery.changeSender': 'Change sender',
+  'delivery.sendButton': 'Send email',
+  'delivery.sending': 'Sending…',
+  'delivery.sendNote':
+    'This sends a real email through Resend. Review the content before sending.',
+  'delivery.reviewCheckbox':
+    'I reviewed the content and want to send this email.',
+  'delivery.noDraftTitle': 'Generate an email first',
+  'delivery.noDraftBody':
+    'The draft is empty. Generate or write an email, then come back to send it.',
+  'delivery.missingFrom': 'Set a valid sender in Settings before sending.',
+  'delivery.invalidTo': 'Enter a valid recipient email.',
+  'delivery.sendSuccessTitle': 'Email sent',
+  'delivery.sendSuccessBody':
+    'Resend accepted the message. Check delivery status in recent sends.',
+  'delivery.sendSuccessId': 'Resend ID',
+  'delivery.done': 'Done',
+  'delivery.rateNote':
+    'Sends from this session are rate limited to protect your account.',
+  'delivery.testTitle': 'Test email',
+  'delivery.testBody':
+    'Send a small test using the current sender and API key.',
+  'delivery.testTo': 'Test recipient',
+  'delivery.testButton': 'Send test',
+  'delivery.testing': 'Sending test…',
+  'delivery.testSuccess': 'Test email sent. Check the inbox.',
+  'delivery.testInvalid': 'Enter a valid test recipient.',
+  'delivery.testSubject': 'PolySend test email',
+  'delivery.testText':
+    'This is a test email from PolySend. If you received it, your Resend setup is working.',
+  'delivery.testFromRequired': 'Set a valid sender before testing.',
+  'delivery.fromNotVerified':
+    'The sender domain is not verified in Resend. Add and verify it before sending.',
+  'delivery.historyTitle': 'Recent sends',
+  'delivery.historyEmpty': 'No emails sent from this session yet.',
+  'delivery.historyRefresh': 'Refresh status',
+  'delivery.historyFullAccess':
+    'A Full access key is required to refresh delivery status.',
+  'delivery.historyError': 'Could not load recent sends.',
+  'delivery.viewDashboard': 'Open Resend dashboard',
+  'delivery.status': 'status',
+  'delivery.event.accepted': 'accepted',
+  'delivery.event.sent': 'sent',
+  'delivery.event.delivered': 'delivered',
+  'delivery.event.bounced': 'bounced',
+  'delivery.event.complained': 'complained',
+  'delivery.event.opened': 'opened',
+  'delivery.event.clicked': 'clicked',
+  'delivery.event.delivery_delayed': 'delayed',
+  'delivery.event.failed': 'failed',
+  'delivery.event.scheduled': 'scheduled',
+  'delivery.event.unknown': 'unknown',
+  'delivery.security':
+    'The panel key stays only in this tab’s sessionStorage and is sent only to your local backend. For production, set RESEND_API_KEY on the server.',
+  'delivery.providerReady':
+    'Provider layer: Resend now; SMTP, Amazon SES, and others can be plugged in later.',
+  'delivery.fullAccessHint':
+    'Use a Full access key to list domains and refresh delivery status.',
+  'delivery.testNote': 'Test sends also count toward the hourly limit.',
+
+  'errors.missing_resend_key':
+    'Connect a Resend API key in Delivery settings to send emails.',
+  'errors.resend_invalid_key':
+    'The Resend API key is invalid, inactive, or restricted. Use a valid key.',
+  'errors.resend_forbidden':
+    'Resend rejected the sender or domain. Check the verified domain and key permissions.',
+  'errors.resend_validation':
+    'Resend rejected the email. Check the recipient, sender, subject, and content.',
+  'errors.resend_rate_limited':
+    'Resend rate limit reached. Wait a moment and try again.',
+  'errors.resend_timeout': 'Resend took too long to respond. Try again.',
+  'errors.resend_error': 'Resend could not process the request. Try again.',
+  'errors.send_rate_limited':
+    'Too many emails sent from this session. Wait a few minutes and try again.',
+  'errors.invalid_recipient': 'Enter a valid recipient email.',
+  'errors.invalid_sender': 'Enter a valid sender email.',
+  'errors.invalid_reply_to': 'Enter a valid Reply-To email.',
+  'errors.missing_subject': 'Enter a subject before sending.',
+  'errors.missing_email_body': 'The email body is empty.',
+  'errors.invalid_domain': 'Invalid domain.',
+  'errors.email_not_found': 'This email is not in the session history.',
 } satisfies Record<string, string>;
 
 export type MessageKey = keyof typeof en;
@@ -620,6 +779,167 @@ const pt: Record<MessageKey, string> = {
   'errors.bad_json': 'O corpo da requisição não é um JSON válido.',
   'errors.internal_error': 'Erro interno no servidor. Tente novamente.',
   'errors.no_model': 'Nenhum modelo selecionado. Escolha um no catálogo Go.',
+
+  'header.delivery': 'Envio',
+  'header.deliveryTitle': 'Configurações de envio da Resend',
+  'header.deliveryAria': 'Abrir configurações de envio',
+  'email.send': 'Enviar',
+  'email.sendTitle': 'Enviar este e-mail pela Resend',
+  'email.sendAria': 'Enviar este e-mail',
+  'email.sent': 'Enviado',
+
+  'delivery.eyebrow': 'envio · resend',
+  'delivery.title': 'Enviar com Resend',
+  'delivery.tabs.send': 'Enviar',
+  'delivery.tabs.settings': 'Configurações',
+  'delivery.provider': 'Provedor',
+  'delivery.providerResend': 'Resend',
+  'delivery.providerNote':
+    'A camada de provedor está pronta para SMTP, Amazon SES e outros adaptadores depois.',
+  'delivery.connected': 'Conectado',
+  'delivery.notConnected': 'Não conectado',
+  'delivery.fullAccess': 'Acesso total',
+  'delivery.restricted': 'Chave somente envio',
+  'delivery.serverKey': 'Chave do servidor (.env)',
+  'delivery.panelKey': 'Chave do painel nesta aba',
+  'delivery.loading': 'Carregando…',
+  'delivery.retry': 'Tentar novamente',
+  'delivery.errorTitle': 'Algo deu errado',
+  'delivery.providerDetails': 'Resposta do provedor',
+  'delivery.copyId': 'Copiar ID',
+  'delivery.copied': 'Copiado',
+  'delivery.keyTitle': 'Chave de API da Resend',
+  'delivery.keyHelp':
+    'Uma chave de Acesso total lista domínios e status de entrega. Uma chave somente envio ainda consegue enviar e-mails.',
+  'delivery.keyPlaceholder': 're_...',
+  'delivery.keyValidate': 'Validar e conectar',
+  'delivery.keyValidating': 'Validando…',
+  'delivery.keyUseServer': 'Usar a chave do servidor (.env)',
+  'delivery.keyRemove': 'Remover chave do painel',
+  'delivery.keyInvalid': 'Chave de API da Resend inválida.',
+  'delivery.keyRequired': 'Conecte uma chave da Resend para enviar.',
+  'delivery.keySection': 'Conexão',
+  'delivery.openApiKeys': 'Chaves de API da Resend',
+  'delivery.connectTitle': 'Conecte a Resend para enviar e-mails reais',
+  'delivery.connectBody':
+    'Cole uma chave de API da Resend em Configurações. A chave fica apenas no sessionStorage desta aba e é enviada somente ao seu backend.',
+  'delivery.connectButton': 'Abrir configurações',
+  'delivery.domainsTitle': 'Domínios de envio',
+  'delivery.domainsRefresh': 'Atualizar domínios',
+  'delivery.domainsEmpty':
+    'Nenhum domínio nesta conta da Resend. Adicione e verifique um domínio antes de enviar.',
+  'delivery.domainsRestricted':
+    'Esta chave é somente envio, então os domínios não podem ser listados. Informe o remetente manualmente ou use uma chave de Acesso total.',
+  'delivery.domainsHint':
+    'Apenas domínios verificados podem ser usados no endereço De.',
+  'delivery.addDomain': 'Adicionar domínio na Resend',
+  'delivery.domainVerify': 'Verificar',
+  'delivery.domainVerifying': 'Verificando…',
+  'delivery.domainVerifyStarted':
+    'Verificação iniciada. Atualize em alguns segundos.',
+  'delivery.domainAria': 'Domínios de envio da Resend',
+  'delivery.domainStatus.verified': 'verificado',
+  'delivery.domainStatus.pending': 'pendente',
+  'delivery.domainStatus.not_started': 'não iniciado',
+  'delivery.domainStatus.failed': 'falhou',
+  'delivery.domainStatus.temporary_failure': 'verificando',
+  'delivery.domainStatus.unknown': 'desconhecido',
+  'delivery.senderTitle': 'Identidade do remetente',
+  'delivery.fromName': 'Nome do remetente',
+  'delivery.fromEmail': 'E-mail do remetente',
+  'delivery.fromHint': 'Use um e-mail de um domínio verificado na Resend.',
+  'delivery.replyTo': 'Responder para',
+  'delivery.replyHint': 'Opcional, mas use uma caixa que você realmente lê.',
+  'delivery.autosave': 'As alterações do remetente ficam salvas neste navegador.',
+  'delivery.reviewTitle': 'Revisar e enviar',
+  'delivery.to': 'Para',
+  'delivery.toPlaceholder': 'destinatário@empresa.com',
+  'delivery.from': 'De',
+  'delivery.subject': 'Assunto',
+  'delivery.body': 'Corpo',
+  'delivery.changeSender': 'Alterar remetente',
+  'delivery.sendButton': 'Enviar e-mail',
+  'delivery.sending': 'Enviando…',
+  'delivery.sendNote':
+    'Isso envia um e-mail real pela Resend. Revise o conteúdo antes de enviar.',
+  'delivery.reviewCheckbox':
+    'Revisei o conteúdo e quero enviar este e-mail.',
+  'delivery.noDraftTitle': 'Gere um e-mail primeiro',
+  'delivery.noDraftBody':
+    'O rascunho está vazio. Gere ou escreva um e-mail e volte para enviar.',
+  'delivery.missingFrom': 'Configure um remetente válido antes de enviar.',
+  'delivery.invalidTo': 'Informe um e-mail de destinatário válido.',
+  'delivery.sendSuccessTitle': 'E-mail enviado',
+  'delivery.sendSuccessBody':
+    'A Resend aceitou a mensagem. Acompanhe a entrega em envios recentes.',
+  'delivery.sendSuccessId': 'ID na Resend',
+  'delivery.done': 'Concluir',
+  'delivery.rateNote':
+    'Envios desta sessão têm limite de taxa para proteger sua conta.',
+  'delivery.testTitle': 'E-mail de teste',
+  'delivery.testBody':
+    'Envie um teste pequeno usando o remetente e a chave atuais.',
+  'delivery.testTo': 'Destinatário do teste',
+  'delivery.testButton': 'Enviar teste',
+  'delivery.testing': 'Enviando teste…',
+  'delivery.testSuccess': 'E-mail de teste enviado. Confira a caixa de entrada.',
+  'delivery.testInvalid': 'Informe um destinatário de teste válido.',
+  'delivery.testSubject': 'E-mail de teste do PolySend',
+  'delivery.testText':
+    'Este é um e-mail de teste do PolySend. Se você recebeu, a configuração da Resend está funcionando.',
+  'delivery.testFromRequired': 'Configure um remetente válido antes do teste.',
+  'delivery.fromNotVerified':
+    'O domínio do remetente não está verificado na Resend. Adicione e verifique antes de enviar.',
+  'delivery.historyTitle': 'Envios recentes',
+  'delivery.historyEmpty': 'Nenhum e-mail enviado desta sessão ainda.',
+  'delivery.historyRefresh': 'Atualizar status',
+  'delivery.historyFullAccess':
+    'É necessário uma chave de Acesso total para atualizar o status de entrega.',
+  'delivery.historyError': 'Não foi possível carregar os envios recentes.',
+  'delivery.viewDashboard': 'Abrir dashboard da Resend',
+  'delivery.status': 'status',
+  'delivery.event.accepted': 'aceito',
+  'delivery.event.sent': 'enviado',
+  'delivery.event.delivered': 'entregue',
+  'delivery.event.bounced': 'devolvido',
+  'delivery.event.complained': 'reclamação',
+  'delivery.event.opened': 'aberto',
+  'delivery.event.clicked': 'clicado',
+  'delivery.event.delivery_delayed': 'atrasado',
+  'delivery.event.failed': 'falhou',
+  'delivery.event.scheduled': 'agendado',
+  'delivery.event.unknown': 'desconhecido',
+  'delivery.security':
+    'A chave do painel fica apenas no sessionStorage desta aba e é enviada somente para o seu backend local. Em produção, defina RESEND_API_KEY no servidor.',
+  'delivery.providerReady':
+    'Camada de provedor: Resend agora; SMTP, Amazon SES e outros podem ser adicionados depois.',
+  'delivery.fullAccessHint':
+    'Use uma chave de Acesso total para listar domínios e atualizar o status de entrega.',
+  'delivery.testNote': 'Envios de teste também contam no limite por hora.',
+
+  'errors.missing_resend_key':
+    'Conecte uma chave da Resend em Envio para enviar e-mails.',
+  'errors.resend_invalid_key':
+    'A chave da Resend é inválida, inativa ou restrita. Use uma chave válida.',
+  'errors.resend_forbidden':
+    'A Resend rejeitou o remetente ou o domínio. Confira o domínio verificado e as permissões da chave.',
+  'errors.resend_validation':
+    'A Resend rejeitou o e-mail. Confira destinatário, remetente, assunto e conteúdo.',
+  'errors.resend_rate_limited':
+    'Limite de taxa da Resend atingido. Aguarde um instante e tente novamente.',
+  'errors.resend_timeout':
+    'A Resend demorou demais para responder. Tente novamente.',
+  'errors.resend_error':
+    'A Resend não conseguiu processar a requisição. Tente novamente.',
+  'errors.send_rate_limited':
+    'Muitos e-mails enviados desta sessão. Aguarde alguns minutos e tente novamente.',
+  'errors.invalid_recipient': 'Informe um e-mail de destinatário válido.',
+  'errors.invalid_sender': 'Informe um e-mail de remetente válido.',
+  'errors.invalid_reply_to': 'Informe um e-mail de Responder para válido.',
+  'errors.missing_subject': 'Informe um assunto antes de enviar.',
+  'errors.missing_email_body': 'O corpo do e-mail está vazio.',
+  'errors.invalid_domain': 'Domínio inválido.',
+  'errors.email_not_found': 'Este e-mail não está no histórico desta sessão.',
 };
 
 export type Translate = (key: MessageKey, vars?: Record<string, string | number>) => string;

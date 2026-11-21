@@ -18,6 +18,22 @@ import {
   buildSelectionMessages,
   maxTokensFor,
 } from './prompts.mjs';
+import {
+  ResendError,
+  getEmail as getResendEmail,
+  resolveResendKey,
+  resendServerKeyConfigured,
+  sendEmail as sendResendEmail,
+  validateKey as validateResendKey,
+  verifyDomain as verifyResendDomain,
+} from './delivery/resend.mjs';
+import { textToHtml } from './delivery/templates.mjs';
+import {
+  findSend,
+  listSends,
+  recordSend,
+  updateSend,
+} from './delivery/store.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env'), quiet: true });
@@ -32,6 +48,12 @@ const MODES = new Set(['generate', 'refine', 'selection']);
 const EFFORTS = new Set(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
 const HEARTBEAT_MS = 15_000;
 const STREAM_TIMEOUT_MS = 180_000;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const SEND_LIMIT_PER_HOUR = Math.max(
+  1,
+  Number(process.env.RESEND_SEND_LIMIT_PER_HOUR) || 20,
+);
+const sendHits = new Map();
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '256kb' }));
@@ -129,6 +151,128 @@ function sessionIdFrom(req) {
   const raw = trim(req.get('x-session-id'), 80).replace(/[^A-Za-z0-9_-]/g, '');
   if (raw.startsWith('ses_') && raw.length >= 8) return raw;
   return `ses_live_${randomUUID().replaceAll('-', '').slice(0, 24)}`;
+}
+
+function resendDefaults() {
+  return {
+    fromName: trim(process.env.RESEND_FROM_NAME, 80) || 'PolySend',
+    fromEmail: trim(process.env.RESEND_FROM_EMAIL, 320) || null,
+    replyTo: trim(process.env.RESEND_REPLY_TO, 320) || null,
+  };
+}
+
+function deliveryError(error) {
+  if (!(error instanceof ResendError)) return error;
+
+  const detail =
+    typeof error.details === 'string'
+      ? error.details
+      : error.details?.message ?? error.message ?? null;
+
+  if (error.status === 401) {
+    return new HttpError(
+      401,
+      'resend_invalid_key',
+      'The Resend API key is invalid, inactive, or restricted.',
+      detail,
+    );
+  }
+  if (error.status === 403) {
+    return new HttpError(
+      403,
+      'resend_forbidden',
+      'Resend rejected this request. Check the sender domain and API key permissions.',
+      detail,
+    );
+  }
+  if (error.status === 400 || error.status === 422) {
+    return new HttpError(
+      422,
+      'resend_validation',
+      'Resend rejected the email. Check the sender, recipient, and content.',
+      detail,
+    );
+  }
+  if (error.status === 429) {
+    return new HttpError(
+      429,
+      'resend_rate_limited',
+      'Resend rate limit reached. Wait a moment and try again.',
+      detail,
+    );
+  }
+  if (error.status === 504) {
+    return new HttpError(
+      504,
+      'resend_timeout',
+      'Resend took too long to respond. Try again.',
+      detail,
+    );
+  }
+  return new HttpError(
+    502,
+    'resend_error',
+    'Resend could not process the request. Try again.',
+    detail,
+  );
+}
+
+function validateDeliveryPayload(body) {
+  if (!body || typeof body !== 'object') {
+    throw new HttpError(400, 'bad_request', 'Invalid delivery payload.');
+  }
+
+  const to = trim(body.to, 320);
+  const fromEmail = trim(body.fromEmail, 320);
+  const replyTo = trim(body.replyTo, 320);
+  const fromName = trim(body.fromName, 80).replace(/[<>\r\n"]/g, '').trim();
+  const subject = trim(body.subject, 240).replace(/[\r\n]+/g, ' ').trim();
+  const text = trim(body.text, 50_000);
+  const idempotencyKey = trim(body.idempotencyKey, 256);
+
+  if (!EMAIL_PATTERN.test(to)) {
+    throw new HttpError(400, 'invalid_recipient', 'Enter a valid recipient email address.');
+  }
+  if (!EMAIL_PATTERN.test(fromEmail)) {
+    throw new HttpError(400, 'invalid_sender', 'Enter a valid sender email address.');
+  }
+  if (replyTo && !EMAIL_PATTERN.test(replyTo)) {
+    throw new HttpError(400, 'invalid_reply_to', 'Enter a valid reply-to email address.');
+  }
+  if (!subject) {
+    throw new HttpError(400, 'missing_subject', 'The email subject is required.');
+  }
+  if (!text) {
+    throw new HttpError(400, 'missing_email_body', 'The email body is required.');
+  }
+
+  return {
+    to,
+    fromEmail,
+    replyTo: replyTo || null,
+    fromName: fromName || 'PolySend',
+    subject,
+    text,
+    idempotencyKey: idempotencyKey || randomUUID(),
+  };
+}
+
+function allowSendHit(bucket, limit) {
+  const now = Date.now();
+  const recent = (sendHits.get(bucket) ?? []).filter((time) => now - time < 3_600_000);
+  if (recent.length >= limit) {
+    sendHits.set(bucket, recent);
+    return false;
+  }
+  recent.push(now);
+  sendHits.set(bucket, recent);
+  return true;
+}
+
+function checkSendRate(sessionId, ip) {
+  const sessionAllowed = allowSendHit(`session:${sessionId}`, SEND_LIMIT_PER_HOUR);
+  const ipAllowed = allowSendHit(`ip:${ip}`, SEND_LIMIT_PER_HOUR * 2);
+  return sessionAllowed && ipAllowed;
 }
 
 function sseWrite(res, event, data) {
@@ -386,6 +530,9 @@ app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
     serverKeyConfigured: serverKeyConfigured(),
+    resendKeyConfigured: resendServerKeyConfigured(),
+    resendProvider: 'resend',
+    resendDefaults: resendDefaults(),
     apiBase: BASE_URL,
     fetchedAt: new Date().toISOString(),
   });
@@ -436,6 +583,150 @@ app.get(
   }),
 );
 
+app.get(
+  '/api/delivery/status',
+  asyncRoute(async (req, res) => {
+    const key = resolveResendKey(req);
+    if (!key) {
+      throw new HttpError(
+        401,
+        'missing_resend_key',
+        'No Resend API key configured. Open Delivery settings and connect your Resend key.',
+      );
+    }
+
+    try {
+      const result = await validateResendKey(key);
+      res.json({
+        provider: 'resend',
+        configured: true,
+        valid: true,
+        keySource: req.get('x-resend-key')?.trim() ? 'client' : 'server',
+        restricted: result.restricted,
+        domains: result.domains,
+        defaults: resendDefaults(),
+      });
+    } catch (error) {
+      throw deliveryError(error);
+    }
+  }),
+);
+
+app.post(
+  '/api/delivery/domains/:id/verify',
+  asyncRoute(async (req, res) => {
+    const key = resolveResendKey(req);
+    if (!key) {
+      throw new HttpError(401, 'missing_resend_key', 'No Resend API key configured.');
+    }
+    const domainId = trim(req.params.id, 100);
+    if (!domainId) {
+      throw new HttpError(400, 'invalid_domain', 'Invalid domain ID.');
+    }
+
+    try {
+      await verifyResendDomain(key, domainId);
+      res.json({ ok: true });
+    } catch (error) {
+      throw deliveryError(error);
+    }
+  }),
+);
+
+app.get(
+  '/api/delivery/history',
+  asyncRoute(async (req, res) => {
+    res.json({ items: listSends(sessionIdFrom(req)) });
+  }),
+);
+
+app.get(
+  '/api/delivery/history/:id',
+  asyncRoute(async (req, res) => {
+    const key = resolveResendKey(req);
+    if (!key) {
+      throw new HttpError(401, 'missing_resend_key', 'No Resend API key configured.');
+    }
+
+    const sessionId = sessionIdFrom(req);
+    const emailId = trim(req.params.id, 120);
+    const item = findSend(sessionId, emailId);
+    if (!item) {
+      throw new HttpError(404, 'email_not_found', 'This email is not in this session history.');
+    }
+
+    try {
+      const remote = await getResendEmail(key, emailId);
+      const updated = updateSend(sessionId, emailId, {
+        lastEvent: remote.lastEvent,
+        status: remote.lastEvent ?? item.status,
+        lastCheckedAt: new Date().toISOString(),
+      });
+      res.json({ item: updated ?? item });
+    } catch (error) {
+      throw deliveryError(error);
+    }
+  }),
+);
+
+app.post(
+  '/api/delivery/send',
+  asyncRoute(async (req, res) => {
+    const key = resolveResendKey(req);
+    if (!key) {
+      throw new HttpError(
+        401,
+        'missing_resend_key',
+        'No Resend API key configured. Open Delivery settings and connect your Resend key.',
+      );
+    }
+
+    const sessionId = sessionIdFrom(req);
+    if (!checkSendRate(sessionId, req.ip)) {
+      throw new HttpError(
+        429,
+        'send_rate_limited',
+        'Too many emails sent from this session. Wait a few minutes and try again.',
+      );
+    }
+
+    const payload = validateDeliveryPayload(req.body);
+    const fromName = payload.fromName;
+    const from = `${fromName} <${payload.fromEmail}>`;
+    const html = textToHtml(payload.text);
+
+    let result;
+    try {
+      result = await sendResendEmail(key, {
+        from,
+        to: payload.to,
+        subject: payload.subject,
+        text: payload.text,
+        html,
+        replyTo: payload.replyTo,
+        idempotencyKey: payload.idempotencyKey,
+      });
+    } catch (error) {
+      throw deliveryError(error);
+    }
+
+    const item = {
+      id: result.id,
+      provider: 'resend',
+      keySource: req.get('x-resend-key')?.trim() ? 'client' : 'server',
+      to: payload.to,
+      from,
+      subject: payload.subject,
+      createdAt: new Date().toISOString(),
+      status: 'accepted',
+      lastEvent: null,
+    };
+    recordSend(sessionId, item);
+
+    res.status(201).json({ item });
+  }),
+);
+
 app.post('/api/email/stream', asyncRoute(handleEmailStream));
 
 const distDir = path.resolve(__dirname, '../dist');
@@ -480,7 +771,14 @@ app.use((error, req, res, next) => {
   );
   if (error?.details) console.error('  [detail]', String(error.details).slice(0, 500));
 
-  res.status(status).json({ error: { code, message } });
+  const details =
+    error?.details == null
+      ? undefined
+      : typeof error.details === 'string'
+        ? error.details.slice(0, 500)
+        : JSON.stringify(error.details).slice(0, 500);
+
+  res.status(status).json({ error: { code, message, ...(details ? { details } : {}) } });
 });
 
 app.listen(PORT, () => {
@@ -489,7 +787,10 @@ app.listen(PORT, () => {
   console.log('  ---------------------------------------------');
   console.log(`  API      http://localhost:${PORT}`);
   console.log('  Web      http://localhost:5173  (npm run dev)');
-  console.log(`  Key      ${serverKeyConfigured() ? 'carregada do .env' : 'nao configurada'}`);
+  console.log(`  Go key   ${serverKeyConfigured() ? 'carregada do .env' : 'nao configurada'}`);
+  console.log(
+    `  Resend   ${resendServerKeyConfigured() ? 'chave no .env' : 'aguardando chave pelo painel'}`,
+  );
   console.log(`  Upstream ${BASE_URL}`);
   console.log('');
 });
