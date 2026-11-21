@@ -108,9 +108,11 @@ Crie a chave em <https://resend.com/api-keys> e escolha:
 - abrir **Envio › Configurações** no app, colar a chave e clicar em **Validar e conectar**; ou
 - colocar a chave no `.env` como `RESEND_API_KEY`.
 
-A chave do painel fica só no `sessionStorage` daquela aba e é repassada ao backend local pelo
-header `x-resend-key`. Ela nunca é gravada em disco. A chave do servidor serve de fallback e o
-painel pode voltar para ela quando quiser.
+O caminho do painel valida a chave no Resend e grava no `.env` do servidor local como
+`RESEND_API_KEY`, então ela continua após reiniciar o app ou fechar a aba. Se o servidor não
+conseguir escrever no `.env` (por exemplo, em deploy somente leitura), a chave fica apenas no
+`sessionStorage` daquela aba e é enviada pelo header `x-resend-key`. O `.env` está no
+`.gitignore`; nunca faça commit dele.
 
 Os dois tipos de chave funcionam:
 
@@ -201,6 +203,7 @@ server/
   prompts.mjs             prompts de geração, refinamento e seleção
   delivery/
     resend.mjs            adaptador REST do Resend, chave, envio e status
+    env.mjs               grava a chave do painel no .env do servidor
     templates.mjs         template HTML inline a partir do texto puro
     store.mjs             histórico de envios por sessão
 ```
@@ -214,6 +217,7 @@ server/
 | GET    | `/api/usage`        | janelas reais de consumo do plano Go |
 | POST   | `/api/email/stream` | gera/refina e transmite SSE (`subject`, `delta`, `usage`, `done`, `error`) |
 | GET    | `/api/delivery/status` | valida a chave do Resend e retorna domínios, escopos e padrões |
+| POST   | `/api/delivery/key` | valida a chave do painel e salva no `.env` do servidor |
 | POST   | `/api/delivery/domains/:id/verify` | pede ao Resend para reverificar o DNS do domínio |
 | POST   | `/api/delivery/send` | envia o rascunho revisado e registra no histórico da sessão |
 | GET    | `/api/delivery/history` | lista os envios da sessão atual |
@@ -245,8 +249,9 @@ providers. Para a demo ao vivo com amigos, o Go funciona bem.
 
 - As chaves do OpenCode e do Resend podem ficar no `.env` e permanecem **somente no backend**;
   nunca são enviadas ao navegador.
-- Chaves coladas nos painéis ficam no `sessionStorage` daquela aba e são enviadas ao **seu
-  backend local** apenas na requisição que precisa delas; o servidor não grava em disco.
+- A chave do OpenCode no painel fica no `sessionStorage` daquela aba e é enviada apenas ao seu
+  backend local. A chave da Resend é validada e salva no `.env` do servidor local
+  (`RESEND_API_KEY`) para continuar após reiniciar; o `.env` fica fora do Git.
 - Para produção, mantenha as chaves só no servidor e remova a possibilidade de o cliente enviar
   `x-opencode-key` / `x-resend-key` (ou proteja o app com autenticação). Este projeto é uma demo
   local: não exponha o servidor publicamente sem autenticação/rate limit.

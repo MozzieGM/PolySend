@@ -344,19 +344,22 @@ const en = {
   'delivery.copied': 'Copied',
   'delivery.keyTitle': 'Resend API key',
   'delivery.keyHelp':
-    'A Full access key can list domains and delivery statuses. A sending-only key can still send emails.',
+    'A Full access key can list domains and delivery statuses. A sending-only key can still send emails. Connecting validates the key and saves it to the server’s .env.',
   'delivery.keyPlaceholder': 're_...',
   'delivery.keyValidate': 'Validate and connect',
   'delivery.keyValidating': 'Validating…',
   'delivery.keyUseServer': 'Use server key (.env)',
   'delivery.keyRemove': 'Remove panel key',
+  'delivery.keySaved': 'Key validated and saved to the server .env.',
+  'delivery.keySaveFailed':
+    'The key works for this tab, but it could not be saved to the server .env.',
   'delivery.keyInvalid': 'Invalid Resend API key.',
   'delivery.keyRequired': 'Connect a Resend API key to send.',
   'delivery.keySection': 'Connection',
   'delivery.openApiKeys': 'Resend API keys',
   'delivery.connectTitle': 'Connect Resend to send real emails',
   'delivery.connectBody':
-    'Paste a Resend API key in Settings. The key stays in this tab’s sessionStorage and is sent only to your backend.',
+    'Paste a Resend API key in Settings. It is validated and saved to the local server’s .env, then used for sends.',
   'delivery.connectButton': 'Open settings',
   'delivery.domainsTitle': 'Sending domains',
   'delivery.domainsRefresh': 'Refresh domains',
@@ -444,7 +447,7 @@ const en = {
   'delivery.event.scheduled': 'scheduled',
   'delivery.event.unknown': 'unknown',
   'delivery.security':
-    'The panel key stays only in this tab’s sessionStorage and is sent only to your local backend. For production, set RESEND_API_KEY on the server.',
+    'The key is sent only to your local backend and saved to .env (gitignored), so it survives restarts. Protect the server before exposing it publicly.',
   'delivery.providerReady':
     'Provider layer: Resend now; SMTP, Amazon SES, and others can be plugged in later.',
   'delivery.fullAccessHint':
@@ -810,19 +813,22 @@ const pt: Record<MessageKey, string> = {
   'delivery.copied': 'Copiado',
   'delivery.keyTitle': 'Chave de API da Resend',
   'delivery.keyHelp':
-    'Uma chave de Acesso total lista domínios e status de entrega. Uma chave somente envio ainda consegue enviar e-mails.',
+    'Uma chave de Acesso total lista domínios e status de entrega. Uma chave somente envio ainda consegue enviar e-mails. Ao conectar, a chave é validada e salva no .env do servidor.',
   'delivery.keyPlaceholder': 're_...',
   'delivery.keyValidate': 'Validar e conectar',
   'delivery.keyValidating': 'Validando…',
   'delivery.keyUseServer': 'Usar a chave do servidor (.env)',
   'delivery.keyRemove': 'Remover chave do painel',
+  'delivery.keySaved': 'Chave validada e salva no .env do servidor.',
+  'delivery.keySaveFailed':
+    'A chave funciona nesta aba, mas não foi possível salvar no .env do servidor.',
   'delivery.keyInvalid': 'Chave de API da Resend inválida.',
   'delivery.keyRequired': 'Conecte uma chave da Resend para enviar.',
   'delivery.keySection': 'Conexão',
   'delivery.openApiKeys': 'Chaves de API da Resend',
   'delivery.connectTitle': 'Conecte a Resend para enviar e-mails reais',
   'delivery.connectBody':
-    'Cole uma chave de API da Resend em Configurações. A chave fica apenas no sessionStorage desta aba e é enviada somente ao seu backend.',
+    'Cole uma chave de API da Resend em Configurações. Ela é validada e salva no .env do servidor local, e passa a ser usada nos envios.',
   'delivery.connectButton': 'Abrir configurações',
   'delivery.domainsTitle': 'Domínios de envio',
   'delivery.domainsRefresh': 'Atualizar domínios',
@@ -910,7 +916,7 @@ const pt: Record<MessageKey, string> = {
   'delivery.event.scheduled': 'agendado',
   'delivery.event.unknown': 'desconhecido',
   'delivery.security':
-    'A chave do painel fica apenas no sessionStorage desta aba e é enviada somente para o seu backend local. Em produção, defina RESEND_API_KEY no servidor.',
+    'A chave é enviada somente ao seu backend local e salva no .env (fora do Git), então continua após reiniciar. Proteja o servidor antes de expô-lo publicamente.',
   'delivery.providerReady':
     'Camada de provedor: Resend agora; SMTP, Amazon SES e outros podem ser adicionados depois.',
   'delivery.fullAccessHint':

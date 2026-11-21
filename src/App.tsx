@@ -765,6 +765,12 @@ export default function App() {
     writeStorage('session', RESEND_KEY_STORAGE, key);
   };
 
+  const handleResendKeySaved = () => {
+    setHealth((previous) =>
+      previous ? { ...previous, resendKeyConfigured: true } : previous,
+    );
+  };
+
   const handleSelectModel = (id: string) => {
     setSelectedId(id);
     if (isMobile) {
@@ -922,6 +928,7 @@ export default function App() {
         serverKeyConfigured={Boolean(health?.resendKeyConfigured)}
         onClose={() => setDeliveryOpen(false)}
         onKeyChange={handleResendKeyChange}
+        onKeySaved={handleResendKeySaved}
       />
 
       <Toast toast={toast} />

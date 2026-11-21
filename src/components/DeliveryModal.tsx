@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ApiError } from '../lib/api';
 import {
+  connectDeliveryKey,
   extractEmail,
   fetchDeliveryHistory,
   fetchDeliveryStatus,
@@ -48,6 +49,7 @@ interface DeliveryModalProps {
   serverKeyConfigured: boolean;
   onClose: () => void;
   onKeyChange: (key: string) => void;
+  onKeySaved: () => void;
 }
 
 const FROM_NAME_KEY = 'polysend_resend_from_name';
@@ -124,6 +126,7 @@ export function DeliveryModal({
   serverKeyConfigured,
   onClose,
   onKeyChange,
+  onKeySaved,
 }: DeliveryModalProps) {
   const { locale, t } = useI18n();
   const [tab, setTab] = useState<DeliveryTab>(initialTab);
@@ -134,6 +137,10 @@ export function DeliveryModal({
   const [showKey, setShowKey] = useState(false);
   const [keyBusy, setKeyBusy] = useState(false);
   const [keyError, setKeyError] = useState<string | null>(null);
+  const [keyMessage, setKeyMessage] = useState<{
+    tone: 'ok' | 'warn';
+    text: string;
+  } | null>(null);
   const [domainBusyId, setDomainBusyId] = useState<string | null>(null);
   const [domainMessage, setDomainMessage] = useState<string | null>(null);
   const [domainError, setDomainError] = useState<string | null>(null);
@@ -230,6 +237,7 @@ export function DeliveryModal({
     setTestMessage(null);
     setTestError(null);
     setKeyError(null);
+    setKeyMessage(null);
     setDomainError(null);
     setDomainMessage(null);
     setKeyInput('');
@@ -289,9 +297,23 @@ export function DeliveryModal({
 
     setKeyBusy(true);
     setKeyError(null);
+    setKeyMessage(null);
     try {
-      const data = await fetchDeliveryStatus(candidate);
-      onKeyChange(candidate);
+      let data: DeliveryStatus;
+      try {
+        data = await connectDeliveryKey(candidate);
+        onKeyChange('');
+        onKeySaved();
+        setKeyMessage({ tone: 'ok', text: t('delivery.keySaved') });
+      } catch (error) {
+        if (error instanceof ApiError && error.code === 'env_write_failed') {
+          data = await fetchDeliveryStatus(candidate);
+          onKeyChange(candidate);
+          setKeyMessage({ tone: 'warn', text: t('delivery.keySaveFailed') });
+        } else {
+          throw error;
+        }
+      }
       setStatus(data);
       setStatusError(null);
       setKeyInput('');
@@ -316,12 +338,14 @@ export function DeliveryModal({
     setStatus(null);
     setStatusError(null);
     setKeyError(null);
+    setKeyMessage(null);
   };
 
   const handleUseServerKey = () => {
     onKeyChange('');
     setKeyInput('');
     setKeyError(null);
+    setKeyMessage(null);
     setStatusError(null);
   };
 
@@ -739,6 +763,7 @@ export function DeliveryModal({
               onChange={(event) => {
                 setKeyInput(event.target.value);
                 setKeyError(null);
+                setKeyMessage(null);
               }}
               placeholder={keyInput ? t('delivery.keyPlaceholder') : status?.keySource === 'client' ? '••••••••' : t('delivery.keyPlaceholder')}
               autoComplete="off"
@@ -759,6 +784,17 @@ export function DeliveryModal({
             <div className="delivery-inline-error" role="alert">
               {keyError}
             </div>
+          )}
+          {keyMessage && (
+            <p
+              className={
+                keyMessage.tone === 'ok'
+                  ? 'delivery-success-text'
+                  : 'delivery-inline-warning'
+              }
+            >
+              {keyMessage.text}
+            </p>
           )}
           <p className="delivery-note">{t('delivery.keyHelp')}</p>
           <div className="delivery-key-actions">

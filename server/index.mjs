@@ -28,6 +28,7 @@ import {
   verifyDomain as verifyResendDomain,
 } from './delivery/resend.mjs';
 import { textToHtml } from './delivery/templates.mjs';
+import { persistResendKey } from './delivery/env.mjs';
 import {
   findSend,
   listSends,
@@ -36,7 +37,8 @@ import {
 } from './delivery/store.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, '../.env'), quiet: true });
+const ENV_PATH = path.resolve(__dirname, '../.env');
+dotenv.config({ path: ENV_PATH, quiet: true });
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8787;
@@ -609,6 +611,46 @@ app.get(
     } catch (error) {
       throw deliveryError(error);
     }
+  }),
+);
+
+app.post(
+  '/api/delivery/key',
+  asyncRoute(async (req, res) => {
+    const key = trim(req.body?.key, 200);
+    if (!/^re_[A-Za-z0-9_-]{8,}$/.test(key)) {
+      throw new HttpError(400, 'invalid_resend_key', 'Paste a valid Resend API key.');
+    }
+
+    let result;
+    try {
+      result = await validateResendKey(key);
+    } catch (error) {
+      throw deliveryError(error);
+    }
+
+    try {
+      await persistResendKey(key, ENV_PATH);
+    } catch (error) {
+      throw new HttpError(
+        500,
+        'env_write_failed',
+        'Could not save the Resend key to the server .env file.',
+        error?.code ?? error?.message,
+      );
+    }
+    process.env.RESEND_API_KEY = key;
+
+    res.json({
+      saved: true,
+      provider: 'resend',
+      configured: true,
+      valid: true,
+      keySource: 'server',
+      restricted: result.restricted,
+      domains: result.domains,
+      defaults: resendDefaults(),
+    });
   }),
 );
 

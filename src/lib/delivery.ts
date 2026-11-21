@@ -23,6 +23,16 @@ export async function fetchDeliveryStatus(key?: string): Promise<DeliveryStatus>
   return response.json();
 }
 
+export async function connectDeliveryKey(key: string): Promise<DeliveryStatus> {
+  const response = await fetch('/api/delivery/key', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key }),
+  });
+  if (!response.ok) throw await parseApiError(response);
+  return response.json();
+}
+
 export async function verifyDeliveryDomain(key: string | undefined, id: string): Promise<void> {
   const response = await fetch(`/api/delivery/domains/${encodeURIComponent(id)}/verify`, {
     method: 'POST',

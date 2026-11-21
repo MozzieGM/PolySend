@@ -108,9 +108,10 @@ Get a key at <https://resend.com/api-keys> and either:
 - open **Delivery › Settings** in the app, paste the key, and click **Validate and connect**; or
 - put it in `.env` as `RESEND_API_KEY`.
 
-The panel key lives only in that tab's `sessionStorage` and is forwarded to your local backend in
-the `x-resend-key` header. It is never written to disk. A server key is used as a fallback, and
-the panel can switch back to it at any time.
+The panel path validates the key with Resend and writes it to the local server's `.env` as
+`RESEND_API_KEY`, so it survives restarts and browser tabs. If the server cannot write `.env`
+(for example a read-only deployment), the key stays only in that tab's `sessionStorage` and is
+forwarded in the `x-resend-key` header instead. `.env` is gitignored; never commit it.
 
 Both key kinds work:
 
@@ -200,6 +201,7 @@ server/
   prompts.mjs             generation, refinement, and selection prompts
   delivery/
     resend.mjs            Resend REST adapter, key validation, send, status
+    env.mjs               persists the panel key into the server .env
     templates.mjs         plain-text to inline-styled HTML template
     store.mjs             per-session send history
 ```
@@ -213,6 +215,7 @@ server/
 | GET    | `/api/usage`        | real Go plan usage windows |
 | POST   | `/api/email/stream` | generates/refines and streams SSE (`subject`, `delta`, `usage`, `done`, `error`) |
 | GET    | `/api/delivery/status` | validates the Resend key and returns domains, scopes, defaults |
+| POST   | `/api/delivery/key` | validates the panel key and saves it to the server `.env` |
 | POST   | `/api/delivery/domains/:id/verify` | asks Resend to re-check a domain's DNS |
 | POST   | `/api/delivery/send` | sends the reviewed draft and records it in session history |
 | GET    | `/api/delivery/history` | lists sends for the current session |
@@ -244,8 +247,9 @@ friends, Go works nicely.
 
 - OpenCode and Resend keys can both live in `.env` and stay **server-side only**; they are never
   sent to the browser.
-- Keys pasted in the panels stay in that tab's `sessionStorage` and are sent to **your local
-  backend** only with the request that needs them; the server does not persist them to disk.
+- The OpenCode panel key stays in that tab's `sessionStorage` and is sent only to your local
+  backend. The Resend panel key is validated and saved to the local server's `.env`
+  (`RESEND_API_KEY`) so it survives restarts; `.env` stays out of Git.
 - For production, keep the keys on the server and remove the client's ability to send
   `x-opencode-key` / `x-resend-key` (or protect the app with authentication). This project is a
   local demo: do not expose the server publicly without authentication and rate limiting.
