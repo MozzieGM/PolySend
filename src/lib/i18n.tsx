@@ -494,6 +494,9 @@ const en = {
     'WhatsApp shares past chats when you link a device. Reconnect once to import them.',
   'whatsapp.reimportConfirm':
     'Reconnect this WhatsApp device to import past chats? You will need to scan the QR code again.',
+  'whatsapp.clearCache': 'Clear cached chats',
+  'whatsapp.clearCacheConfirm':
+    'Clear the local chat cache and reconnect to fetch the current list from WhatsApp? Your device stays linked.',
   'whatsapp.searchChats': 'Search chats',
   'whatsapp.searchEmpty': 'No chats match your search.',
   'whatsapp.noChats': 'No conversations yet',
@@ -1071,6 +1074,9 @@ const pt: Record<MessageKey, string> = {
     'O WhatsApp compartilha o histórico quando um dispositivo é vinculado. Reconecte uma vez para importar.',
   'whatsapp.reimportConfirm':
     'Reconectar este dispositivo do WhatsApp para importar o histórico? Você precisará escanear o QR code novamente.',
+  'whatsapp.clearCache': 'Limpar conversas em cache',
+  'whatsapp.clearCacheConfirm':
+    'Limpar o cache local de conversas e reconectar para buscar a lista atual do WhatsApp? O dispositivo continua vinculado.',
   'whatsapp.searchChats': 'Buscar conversas',
   'whatsapp.searchEmpty': 'Nenhuma conversa corresponde à busca.',
   'whatsapp.noChats': 'Nenhuma conversa ainda',

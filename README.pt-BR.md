@@ -214,13 +214,19 @@ para experimentar.
 ### 2. Conversar em tempo real
 
 - A lista de conversas e a thread aberta atualizam por **SSE** conforme as mensagens chegam, com
-  badges de não lidas e busca.
+  badges de não lidas e busca. Se o stream cair, a UI faz polling até reconectar. Não é preciso
+  webhook público: o servidor mantém um WebSocket com o WhatsApp e repassa os eventos ao navegador.
 - Envie com **Enter**; **Shift+Enter** quebra a linha. Mensagens recebidas, grupos e mensagens
   enviadas são suportados.
 - O histórico é solicitado quando o dispositivo é vinculado. Se a conta foi vinculada antes do
   full sync ser habilitado, use **Importar conversas antigas** (ou Desconecte e escaneie o QR
   novamente) uma vez; a lista se preenche sozinha conforme os lotes chegam.
-- Conversas e mensagens recentes ficam em cache em `.wa-store.json` (fora do Git).
+- Conversas e mensagens recentes ficam em cache em `.wa-store.json` (fora do Git). Conversas e
+  grupos apagados saem do cache quando o WhatsApp avisa. Ao reconectar, o servidor também confere
+  em quais grupos você ainda participa e remove os demais; tombstones impedem que uma nova
+  sincronização de histórico os traga de volta.
+- **Limpar conversas em cache** (ícone de lixeira) apaga o cache local e reconecta para reconstruir
+  a lista atual do WhatsApp sem desvincular o dispositivo.
 - **Mídia é exibida inline**: fotos e stickers abrem em lightbox, vídeos e áudios usam os players
   nativos, e documentos baixam com o nome original. A mídia é baixada sob demanda e fica em cache
   na memória durante a sessão do servidor.
@@ -253,6 +259,7 @@ OpenCode Go de verdade. Remova `WHATSAPP_MOCK` (ou use `0`) para usar o WhatsApp
 | GET    | `/api/whatsapp/status` | estado da conexão, QR e conta vinculada |
 | POST   | `/api/whatsapp/connect` | inicia o socket Baileys e o fluxo de QR |
 | POST   | `/api/whatsapp/logout` | desvincula o dispositivo e limpa `.wa-auth` |
+| POST   | `/api/whatsapp/cache/clear` | limpa o cache de conversas e reconecta para reconstruir a lista |
 | GET    | `/api/whatsapp/chats` | lista de conversas, mais recentes primeiro |
 | GET    | `/api/whatsapp/chats/:jid/messages` | mensagens de uma conversa e marca como lida |
 | POST   | `/api/whatsapp/chats/:jid/messages` | envia uma mensagem de texto |
@@ -321,6 +328,7 @@ server/
 | GET    | `/api/whatsapp/status` | estado da conexão, QR e conta vinculada |
 | POST   | `/api/whatsapp/connect` | inicia o socket Baileys e o QR |
 | POST   | `/api/whatsapp/logout` | desvincula o dispositivo e limpa `.wa-auth` |
+| POST   | `/api/whatsapp/cache/clear` | limpa o cache de conversas e reconecta para reconstruir a lista |
 | GET    | `/api/whatsapp/chats` | lista de conversas, mais recentes primeiro |
 | GET    | `/api/whatsapp/chats/:jid/messages` | mensagens de uma conversa |
 | POST   | `/api/whatsapp/chats/:jid/messages` | envia uma mensagem de texto |

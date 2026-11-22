@@ -7,6 +7,7 @@ import {
   MessageCircle,
   RefreshCw,
   Search,
+  Trash2,
 } from 'lucide-react';
 import { formatShortTime, truncate } from '../../lib/format';
 import { useI18n } from '../../lib/i18n';
@@ -26,6 +27,7 @@ interface WhatsAppChatListProps {
   onDisconnect: () => void;
   onRefresh: () => void;
   onReimport: () => void;
+  onClearCache: () => void;
 }
 
 export function WhatsAppChatList({
@@ -41,6 +43,7 @@ export function WhatsAppChatList({
   onDisconnect,
   onRefresh,
   onReimport,
+  onClearCache,
 }: WhatsAppChatListProps) {
   const { locale, t } = useI18n();
   const syncing = Boolean(status?.history?.syncing);
@@ -83,6 +86,15 @@ export function WhatsAppChatList({
             aria-label={t('whatsapp.refresh')}
           >
             <RefreshCw size={13} className={loading ? 'is-spinning' : ''} />
+          </button>
+          <button
+            type="button"
+            className="icon-btn wa-clear-cache"
+            onClick={onClearCache}
+            title={t('whatsapp.clearCache')}
+            aria-label={t('whatsapp.clearCache')}
+          >
+            <Trash2 size={13} />
           </button>
           <button
             type="button"

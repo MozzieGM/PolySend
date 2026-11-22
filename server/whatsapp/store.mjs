@@ -8,6 +8,7 @@ const chats = new Map();
 const messages = new Map();
 const contacts = new Map();
 const mediaRaw = new Map();
+const hiddenChats = new Set();
 const MAX_MEDIA_RAW = 800;
 
 let storePath = null;
@@ -211,6 +212,33 @@ export function clearMediaRaw() {
   saveSoon();
 }
 
+export function isChatHidden(jid) {
+  return hiddenChats.has(jid);
+}
+
+export function unhideChat(jid) {
+  if (hiddenChats.delete(jid)) saveSoon();
+}
+
+export function deleteChats(jids) {
+  for (const jid of jids ?? []) {
+    if (!jid) continue;
+    hiddenChats.add(jid);
+    chats.delete(jid);
+    messages.delete(jid);
+  }
+  saveSoon();
+}
+
+export function clearChatCache() {
+  chats.clear();
+  messages.clear();
+  mediaRaw.clear();
+  // Keep deleted-chat tombstones so a later history sync does not resurrect
+  // groups the user already left.
+  saveNow();
+}
+
 export function resetUnreadForOwnMessage(jid) {
   const chat = chats.get(jid);
   if (!chat) return;
@@ -250,6 +278,9 @@ export function initStore(file) {
     for (const [id, item] of Object.entries(data.mediaRaw ?? {})) {
       if (item?.message) mediaRaw.set(id, item);
     }
+    for (const jid of data.hiddenChats ?? []) {
+      if (typeof jid === 'string') hiddenChats.add(jid);
+    }
   } catch {
     /* first run */
   }
@@ -262,6 +293,7 @@ function saveNow() {
     messages: Object.fromEntries(messages),
     contacts: Object.fromEntries(contacts),
     mediaRaw: Object.fromEntries(mediaRaw),
+    hiddenChats: [...hiddenChats],
   };
   const temp = path.join(path.dirname(storePath), `.${path.basename(storePath)}.tmp`);
   try {

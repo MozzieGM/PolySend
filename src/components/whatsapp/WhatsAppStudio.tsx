@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, MessageCircle, Sparkles } from 'lucide-react';
 import {
+  clearWhatsAppCache,
   connectWhatsApp,
   detectMessageLanguage,
   fetchWhatsAppChats,
@@ -56,6 +57,7 @@ export function WhatsAppStudio({
   const [status, setStatus] = useState<WhatsAppStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [sseLive, setSseLive] = useState(false);
   const [connectBusy, setConnectBusy] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
 
@@ -166,9 +168,8 @@ export function WhatsAppStudio({
           );
         }
       },
-      onConnectionError: () => {
-        /* EventSource reconnects automatically. */
-      },
+      onOpen: () => setSseLive(true),
+      onConnectionError: () => setSseLive(false),
     });
 
     return () => {
@@ -186,6 +187,39 @@ export function WhatsAppStudio({
     }, 4_000);
     return () => window.clearInterval(timer);
   }, [status?.state, refreshStatus]);
+
+  useEffect(() => {
+    if (status?.state !== 'connected' || sseLive) return;
+    const timer = window.setInterval(() => {
+      void refreshChats();
+      const jid = activeRef.current;
+      if (!jid) return;
+      void fetchWhatsAppMessages(jid)
+        .then((data) => {
+          setMessages((previous) => {
+            if (
+              previous.length === data.messages.length &&
+              previous.every((message, index) => message.id === data.messages[index].id)
+            ) {
+              return previous;
+            }
+            return data.messages;
+          });
+        })
+        .catch(() => {
+          /* the next tick retries */
+        });
+    }, 5_000);
+    return () => window.clearInterval(timer);
+  }, [status?.state, sseLive, refreshChats]);
+
+  useEffect(() => {
+    if (!activeJid) return;
+    if (chats.some((chat) => chat.id === activeJid)) return;
+    setActiveJid(null);
+    setMessages([]);
+    setMobilePane('list');
+  }, [chats, activeJid]);
 
   useEffect(() => {
     if (!activeJid) {
@@ -287,6 +321,25 @@ export function WhatsAppStudio({
       setConnectError(errorMessage(error, t));
     } finally {
       setConnectBusy(false);
+    }
+  };
+
+  const handleClearCache = async () => {
+    if (!window.confirm(t('whatsapp.clearCacheConfirm'))) return;
+    setChatsLoading(true);
+    setChatsError(null);
+    try {
+      const result = await clearWhatsAppCache();
+      setChats(result.chats);
+      setStatus(result.status);
+      setActiveJid(null);
+      setMessages([]);
+      setQuery('');
+      setMobilePane('list');
+    } catch (error) {
+      setChatsError(errorMessage(error, t));
+    } finally {
+      setChatsLoading(false);
     }
   };
 
@@ -393,7 +446,11 @@ export function WhatsAppStudio({
     }, 40);
   };
 
-  if (status?.state === 'connected') {
+  const showStudio =
+    status?.state === 'connected' ||
+    (status?.state === 'connecting' && Boolean(status?.me));
+
+  if (status && showStudio) {
     return (
       <main
         className={`wa-shell ${mobilePane === 'chat' ? 'wa-pane-chat' : ''} ${
@@ -413,6 +470,7 @@ export function WhatsAppStudio({
           onDisconnect={() => void handleDisconnect()}
           onRefresh={() => void refreshChats()}
           onReimport={() => void handleReimport()}
+          onClearCache={() => void handleClearCache()}
         />
 
         {activeChat ? (

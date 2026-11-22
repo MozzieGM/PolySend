@@ -3943,6 +3943,10 @@ body {
   width: 26px;
   height: 26px;
 }
+.wa-clear-cache:hover {
+  color: var(--danger);
+  border-color: rgba(255, 123, 123, 0.24);
+}
 .wa-search {
   flex: 0 0 auto;
   display: flex;

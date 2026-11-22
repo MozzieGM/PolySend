@@ -45,6 +45,19 @@ export async function logoutWhatsApp(): Promise<WhatsAppStatus> {
   );
 }
 
+export async function clearWhatsAppCache(): Promise<{
+  status: WhatsAppStatus;
+  chats: WhatsAppChat[];
+}> {
+  return json<{ status: WhatsAppStatus; chats: WhatsAppChat[] }>(
+    await fetch('/api/whatsapp/cache/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    }),
+  );
+}
+
 export async function fetchWhatsAppChats(query = ''): Promise<WhatsAppChat[]> {
   const suffix = query ? `?q=${encodeURIComponent(query)}` : '';
   const body = await json<{ chats: WhatsAppChat[] }>(

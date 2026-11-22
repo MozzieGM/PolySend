@@ -38,6 +38,7 @@ import {
 import {
   WhatsAppError,
   bootstrapWhatsApp,
+  clearWhatsAppCache,
   connect as connectWhatsApp,
   getMedia as getWhatsAppMedia,
   getStatus as getWhatsAppStatus,
@@ -1030,6 +1031,18 @@ app.post(
     try {
       const status = await logoutWhatsApp();
       res.json({ ...status, chatCount: listWhatsAppChats().length });
+    } catch (error) {
+      throw whatsappError(error);
+    }
+  }),
+);
+
+app.post(
+  '/api/whatsapp/cache/clear',
+  asyncRoute(async (req, res) => {
+    try {
+      const status = await clearWhatsAppCache();
+      res.json({ ok: true, status, chats: listWhatsAppChats() });
     } catch (error) {
       throw whatsappError(error);
     }

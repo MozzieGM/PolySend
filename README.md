@@ -212,13 +212,19 @@ for experiments.
 ### 2. Chat in real time
 
 - The chat list and open thread update over **SSE** as messages arrive, with unread badges and
-  search.
+  search. If the stream drops, the UI falls back to polling until it reconnects. No public webhook
+  is needed: the server keeps a WebSocket to WhatsApp and forwards events to the browser.
 - Send with **Enter**; **Shift+Enter** adds a line. Incoming messages, groups, and sent messages
   are supported.
 - History is requested when you link the device. If the account was linked before full sync was
   enabled, use **Import past chats** (or Disconnect and scan the QR again) once; the list fills in
   automatically as batches arrive.
-- Chats and recent messages are cached in `.wa-store.json` (gitignored).
+- Chats and recent messages are cached in `.wa-store.json` (gitignored). Deleted chats and groups
+  are removed from the cache when WhatsApp reports the deletion. On reconnect, the server also
+  checks which groups you still participate in and prunes the rest. Tombstones stop a later
+  history sync from bringing them back.
+- **Clear cached chats** (trash icon) wipes the local cache and reconnects to rebuild the current
+  list from WhatsApp without unlinking the device.
 - **Media is rendered inline**: photos and stickers open in a lightbox, videos and audio use the
   native players, and documents download with their filename. Media is fetched on demand and
   cached in memory for the current server session.
@@ -252,6 +258,7 @@ for real. Unset `WHATSAPP_MOCK` (or set it to `0`) to use the real WhatsApp conn
 | GET    | `/api/whatsapp/status` | connection state, QR data URL, linked account |
 | POST   | `/api/whatsapp/connect` | starts the Baileys socket and QR flow |
 | POST   | `/api/whatsapp/logout` | unlinks the device and clears `.wa-auth` |
+| POST   | `/api/whatsapp/cache/clear` | clears cached chats and reconnects to rebuild the list |
 | GET    | `/api/whatsapp/chats` | chat list, newest first |
 | GET    | `/api/whatsapp/chats/:jid/messages` | messages for one chat and marks it read |
 | POST   | `/api/whatsapp/chats/:jid/messages` | sends a text message |
@@ -319,6 +326,7 @@ server/
 | GET    | `/api/whatsapp/status` | connection state, QR, linked account |
 | POST   | `/api/whatsapp/connect` | starts the Baileys socket and QR flow |
 | POST   | `/api/whatsapp/logout` | unlinks the device and clears `.wa-auth` |
+| POST   | `/api/whatsapp/cache/clear` | clears cached chats and reconnects to rebuild the list |
 | GET    | `/api/whatsapp/chats` | chat list, newest first |
 | GET    | `/api/whatsapp/chats/:jid/messages` | messages for one chat |
 | POST   | `/api/whatsapp/chats/:jid/messages` | sends a text message |

@@ -14,18 +14,22 @@ import pino from 'pino';
 import QRCode from 'qrcode';
 import {
   addMessage,
+  clearChatCache,
   clearMediaRaw,
   contactNameFor,
+  deleteChats,
   displayNameFor,
   formatPhone,
   getChat,
   getMediaRaw,
   initStore,
+  isChatHidden,
   listChats,
   markChatRead,
   seedMockChats,
   setContactName,
   setMediaRaw,
+  unhideChat,
   upsertChat,
 } from './store.mjs';
 
@@ -275,7 +279,11 @@ function normalizeMessage(raw) {
   return message;
 }
 
-function handleIncoming(raw, { emit = true, unread = true } = {}) {
+function handleIncoming(raw, { emit = true, unread = true, live = false } = {}) {
+  const jid = raw?.key?.remoteJid;
+  if (live && jid) unhideChat(jid);
+  if (!live && jid && isChatHidden(jid)) return null;
+
   const message = normalizeMessage(raw);
   if (!message) return null;
 
@@ -322,7 +330,7 @@ async function applyHistory(data) {
 
   const recent = (data?.messages ?? []).slice(-600);
   for (const raw of recent) {
-    handleIncoming(raw, { emit: false, unread: false });
+    handleIncoming(raw, { emit: false, unread: false, live: false });
   }
 
   for (const chat of data?.chats ?? []) {
@@ -367,6 +375,23 @@ function scheduleReconnect(credsRegistered) {
     void connect().catch(() => {});
   }, delay);
   reconnectTimer.unref?.();
+}
+
+async function pruneLeftGroups(socket) {
+  if (typeof socket?.groupFetchAllParticipating !== 'function') return;
+  try {
+    const groups = await socket.groupFetchAllParticipating();
+    const joined = new Set(Object.keys(groups ?? {}));
+    const stale = listChats()
+      .filter((chat) => chat.isGroup && !joined.has(chat.id))
+      .map((chat) => chat.id);
+    if (!stale.length) return;
+    deleteChats(stale);
+    whatsappEvents.emit('chats', listChats());
+    console.log(`  [whatsapp] removed ${stale.length} cached groups that are no longer joined`);
+  } catch (error) {
+    console.warn('  [whatsapp] could not refresh group membership:', error?.message || error);
+  }
 }
 
 function setDisconnected(errorMessage) {
@@ -421,6 +446,10 @@ function attachSocketHandlers(socket, authState) {
         : null;
       emitStatus();
       whatsappEvents.emit('chats', listChats());
+      const pruneTimer = setTimeout(() => {
+        void pruneLeftGroups(socket);
+      }, 4_000);
+      pruneTimer.unref?.();
       return;
     }
 
@@ -462,12 +491,13 @@ function attachSocketHandlers(socket, authState) {
   socket.ev.on('messages.upsert', ({ messages, type }) => {
     if (type !== 'notify' && type !== 'append') return;
     for (const raw of messages ?? []) {
-      handleIncoming(raw);
+      handleIncoming(raw, { live: true });
     }
   });
 
   socket.ev.on('chats.upsert', (chats) => {
     for (const chat of chats ?? []) {
+      if (!chat?.id || isChatHidden(chat.id)) continue;
       const normalized = normalizeChat(chat);
       if (!normalized) continue;
       upsertChat(normalized.id, normalized);
@@ -477,7 +507,7 @@ function attachSocketHandlers(socket, authState) {
 
   socket.ev.on('chats.update', (chats) => {
     for (const chat of chats ?? []) {
-      if (!chat?.id || shouldSkipJid(chat.id)) continue;
+      if (!chat?.id || shouldSkipJid(chat.id) || isChatHidden(chat.id)) continue;
       upsertChat(chat.id, {
         name: chat.name || chat.subject,
         isGroup: chat.id.endsWith('@g.us'),
@@ -485,6 +515,21 @@ function attachSocketHandlers(socket, authState) {
       });
     }
     whatsappEvents.emit('chats', listChats());
+  });
+
+  socket.ev.on('chats.delete', (jids) => {
+    deleteChats(jids);
+    whatsappEvents.emit('chats', listChats());
+  });
+
+  socket.ev.on('group-participants.update', ({ id, participants, action }) => {
+    const myId = me?.id;
+    if (!myId || !id || !Array.isArray(participants)) return;
+    if (action !== 'remove' && action !== 'leave') return;
+    if (participants.some((participant) => jidNormalizedUser(participant) === myId)) {
+      deleteChats([id]);
+      whatsappEvents.emit('chats', listChats());
+    }
   });
 
   socket.ev.on('contacts.upsert', (contacts) => {
@@ -504,14 +549,16 @@ function attachSocketHandlers(socket, authState) {
 
   socket.ev.on('groups.upsert', (groups) => {
     for (const group of groups ?? []) {
-      if (group?.id) upsertChat(group.id, { name: group.subject, isGroup: true });
+      if (group?.id && !isChatHidden(group.id)) {
+        upsertChat(group.id, { name: group.subject, isGroup: true });
+      }
     }
     whatsappEvents.emit('chats', listChats());
   });
 
   socket.ev.on('groups.update', (groups) => {
     for (const group of groups ?? []) {
-      if (group?.id && group.subject) {
+      if (group?.id && group.subject && !isChatHidden(group.id)) {
         upsertChat(group.id, { name: group.subject, isGroup: true });
       }
     }
@@ -533,6 +580,10 @@ function attachSocketHandlers(socket, authState) {
           historyTimer = null;
         }
         emitStatus();
+        const pruneTimer = setTimeout(() => {
+          void pruneLeftGroups(sock);
+        }, 1_500);
+        pruneTimer.unref?.();
       }
       whatsappEvents.emit('chats', listChats());
     });
@@ -725,6 +776,48 @@ export async function readChat(jid) {
     void sock.readMessages([key]).catch(() => {});
   }
   return chat;
+}
+
+async function reconnect() {
+  clearReconnect();
+  const current = sock;
+  sock = null;
+  if (current) {
+    try {
+      current.ev.removeAllListeners('connection.update');
+      current.ev.removeAllListeners('creds.update');
+    } catch {
+      /* noop */
+    }
+    try {
+      current.end(undefined);
+    } catch {
+      /* noop */
+    }
+  }
+  state = 'disconnected';
+  qrDataUrl = null;
+  lastQr = null;
+  resetHistory();
+  emitStatus();
+  return connect();
+}
+
+export async function clearWhatsAppCache() {
+  clearChatCache();
+  mediaMessages.clear();
+  lastIncomingKey.clear();
+  resetHistory();
+  whatsappEvents.emit('chats', []);
+  if (MOCK) {
+    emitStatus();
+    return getStatus();
+  }
+  if (state === 'connected') {
+    return reconnect();
+  }
+  emitStatus();
+  return getStatus();
 }
 
 export async function getMedia(id) {
