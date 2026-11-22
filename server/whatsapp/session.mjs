@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import makeWASocket, {
   DisconnectReason,
+  downloadMediaMessage,
   fetchLatestBaileysVersion,
   jidNormalizedUser,
   useMultiFileAuthState,
@@ -13,15 +14,18 @@ import pino from 'pino';
 import QRCode from 'qrcode';
 import {
   addMessage,
+  clearMediaRaw,
   contactNameFor,
   displayNameFor,
   formatPhone,
   getChat,
+  getMediaRaw,
   initStore,
   listChats,
   markChatRead,
   seedMockChats,
   setContactName,
+  setMediaRaw,
   upsertChat,
 } from './store.mjs';
 
@@ -57,6 +61,9 @@ let userLogout = false;
 let historyTimer = null;
 let historySync = { active: false, progress: null, isLatest: false };
 const lastIncomingKey = new Map();
+const mediaMessages = new Map();
+const MAX_CACHED_MEDIA = 800;
+const MAX_MEDIA_BYTES = 40 * 1024 * 1024;
 
 const MOCK_ME = {
   id: 'demo@localhost',
@@ -129,34 +136,101 @@ function timestampOf(value) {
   return Number.isFinite(parsed) ? (parsed < 1e12 ? parsed * 1000 : parsed) : Date.now();
 }
 
-function extractContent(message) {
+function numberValue(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value?.toNumber === 'function') return value.toNumber();
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function unwrapMessage(message) {
   if (!message) return null;
-  if (typeof message.conversation === 'string') {
-    return { text: message.conversation, type: 'text' };
+  if (message.ephemeralMessage?.message) return unwrapMessage(message.ephemeralMessage.message);
+  if (message.viewOnceMessage?.message) return unwrapMessage(message.viewOnceMessage.message);
+  if (message.viewOnceMessageV2?.message) return unwrapMessage(message.viewOnceMessageV2.message);
+  if (message.viewOnceMessageV2Extension?.message) {
+    return unwrapMessage(message.viewOnceMessageV2Extension.message);
   }
-  if (typeof message.extendedTextMessage?.text === 'string') {
-    return { text: message.extendedTextMessage.text, type: 'text' };
+  if (message.documentWithCaptionMessage?.message) {
+    return unwrapMessage(message.documentWithCaptionMessage.message);
   }
-  if (message.imageMessage) {
-    return { text: message.imageMessage.caption || 'Photo', type: 'media' };
+  return message;
+}
+
+function mediaInfo(kind, media, extra = {}) {
+  return {
+    kind,
+    mimetype: media?.mimetype || null,
+    fileName: media?.fileName || null,
+    fileLength: numberValue(media?.fileLength),
+    seconds: numberValue(media?.seconds),
+    ptt: Boolean(media?.ptt),
+    width: numberValue(media?.width),
+    height: numberValue(media?.height),
+    ...extra,
+  };
+}
+
+function extractContent(message) {
+  const content = unwrapMessage(message);
+  if (!content) return null;
+  if (typeof content.conversation === 'string') {
+    return { text: content.conversation, type: 'text' };
   }
-  if (message.videoMessage) {
-    return { text: message.videoMessage.caption || 'Video', type: 'media' };
+  if (typeof content.extendedTextMessage?.text === 'string') {
+    return { text: content.extendedTextMessage.text, type: 'text' };
   }
-  if (message.audioMessage) {
-    return { text: 'Voice message', type: 'media' };
-  }
-  if (message.documentMessage) {
+  if (content.imageMessage) {
     return {
-      text: message.documentMessage.fileName
-        ? `Document: ${message.documentMessage.fileName}`
-        : 'Document',
+      text: content.imageMessage.caption || '',
       type: 'media',
+      media: mediaInfo('image', content.imageMessage),
     };
   }
-  if (message.stickerMessage) return { text: 'Sticker', type: 'media' };
-  if (message.locationMessage) return { text: 'Location', type: 'media' };
-  if (message.contactMessage) return { text: 'Contact', type: 'media' };
+  if (content.videoMessage) {
+    return {
+      text: content.videoMessage.caption || '',
+      type: 'media',
+      media: mediaInfo('video', content.videoMessage),
+    };
+  }
+  if (content.ptvMessage) {
+    return {
+      text: '',
+      type: 'media',
+      media: mediaInfo('video', content.ptvMessage),
+    };
+  }
+  if (content.audioMessage) {
+    return {
+      text: '',
+      type: 'media',
+      media: mediaInfo('audio', content.audioMessage),
+    };
+  }
+  if (content.documentMessage) {
+    return {
+      text: content.documentMessage.caption || '',
+      type: 'media',
+      media: mediaInfo('document', content.documentMessage),
+    };
+  }
+  if (content.stickerMessage) {
+    return {
+      text: '',
+      type: 'media',
+      media: mediaInfo('sticker', content.stickerMessage),
+    };
+  }
+  if (content.lottieStickerMessage?.message) {
+    return { text: 'Sticker', type: 'media', media: null };
+  }
+  if (content.locationMessage) {
+    return { text: 'Location', type: 'text' };
+  }
+  if (content.contactMessage) {
+    return { text: 'Contact', type: 'text' };
+  }
   return null;
 }
 
@@ -177,7 +251,7 @@ function normalizeMessage(raw) {
       contactNameFor(senderId) ||
       (jid.endsWith('@g.us') ? formatPhone(senderId) : displayNameFor(jid));
 
-  return {
+  const message = {
     id: key.id,
     chatId: jid,
     senderId,
@@ -186,7 +260,19 @@ function normalizeMessage(raw) {
     timestamp: timestampOf(raw.messageTimestamp),
     fromMe,
     type: content.type,
+    media: content.media ?? null,
   };
+
+  if (message.media) {
+    mediaMessages.set(message.id, raw);
+    setMediaRaw(message.id, raw);
+    if (mediaMessages.size > MAX_CACHED_MEDIA) {
+      const oldest = mediaMessages.keys().next().value;
+      if (oldest) mediaMessages.delete(oldest);
+    }
+  }
+
+  return message;
 }
 
 function handleIncoming(raw, { emit = true, unread = true } = {}) {
@@ -545,6 +631,8 @@ export async function logout() {
   lastQr = null;
   me = null;
   resetHistory();
+  mediaMessages.clear();
+  clearMediaRaw();
   lastError = null;
   await fs.rm(AUTH_DIR, { recursive: true, force: true }).catch(() => {});
   emitStatus();
@@ -637,6 +725,60 @@ export async function readChat(jid) {
     void sock.readMessages([key]).catch(() => {});
   }
   return chat;
+}
+
+export async function getMedia(id) {
+  const raw = mediaMessages.get(id) ?? getMediaRaw(id);
+  if (!raw) {
+    throw new WhatsAppError(
+      404,
+      'whatsapp_media_unavailable',
+      'This media is no longer available in the session cache.',
+    );
+  }
+  mediaMessages.set(id, raw);
+
+  const content = extractContent(raw.message);
+  if (!content?.media) {
+    throw new WhatsAppError(404, 'whatsapp_media_unavailable', 'This message has no media.');
+  }
+
+  let timer;
+  let buffer;
+  try {
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Media download timed out.')), 45_000);
+      timer.unref?.();
+    });
+    buffer = await Promise.race([
+      downloadMediaMessage(raw, 'buffer', {}, {
+        logger,
+        reuploadRequest: async (message) => message,
+      }),
+      timeout,
+    ]);
+  } catch (error) {
+    throw new WhatsAppError(
+      502,
+      'whatsapp_media_failed',
+      `Could not download this media: ${error?.message || 'unknown error'}`,
+    );
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+    throw new WhatsAppError(502, 'whatsapp_media_failed', 'WhatsApp returned empty media.');
+  }
+  if (buffer.length > MAX_MEDIA_BYTES) {
+    throw new WhatsAppError(413, 'whatsapp_media_too_large', 'This media is too large to preview.');
+  }
+
+  return {
+    buffer,
+    ...content.media,
+    caption: content.text,
+  };
 }
 
 export async function bootstrapWhatsApp() {

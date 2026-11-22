@@ -191,6 +191,8 @@ without changing the studio itself.
 
 ![WhatsApp Studio preview](img/whatsapp-preview.png)
 
+![WhatsApp media preview](img/whatsapp-media.png)
+
 Switch to **WhatsApp** in the header. The workspace has three panes: conversations on the left,
 the live thread in the center, and an AI copilot on the right.
 
@@ -217,8 +219,10 @@ for experiments.
   enabled, use **Import past chats** (or Disconnect and scan the QR again) once; the list fills in
   automatically as batches arrive.
 - Chats and recent messages are cached in `.wa-store.json` (gitignored).
-- Media messages appear as labels (`Photo`, `Voice message`, `Document`). Attachments, voice
-  notes, reactions, and calls are not implemented yet.
+- **Media is rendered inline**: photos and stickers open in a lightbox, videos and audio use the
+  native players, and documents download with their filename. Media is fetched on demand and
+  cached in memory for the current server session.
+- Sending attachments from the composer, reactions, and calls are not implemented yet.
 
 ### 3. Write with the AI copilot
 
@@ -293,7 +297,7 @@ server/
     templates.mjs         plain-text to inline-styled HTML template
     store.mjs             per-session send history
   whatsapp/
-    session.mjs           Baileys socket, QR, reconnect, incoming/sent messages
+    session.mjs           Baileys socket, QR, reconnect, messaging, media proxy
     store.mjs             chat/message cache (`.wa-store.json`)
     prompts.mjs           WhatsApp copilot prompts
 ```
@@ -318,6 +322,7 @@ server/
 | GET    | `/api/whatsapp/chats` | chat list, newest first |
 | GET    | `/api/whatsapp/chats/:jid/messages` | messages for one chat |
 | POST   | `/api/whatsapp/chats/:jid/messages` | sends a text message |
+| GET    | `/api/whatsapp/media/:id` | downloads and serves a photo, video, audio, or document |
 | GET    | `/api/whatsapp/events` | SSE stream for status, chats, and messages |
 | POST   | `/api/whatsapp/ai/stream` | streams the copilot draft (`delta`, `usage`, `done`) |
 

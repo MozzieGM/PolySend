@@ -227,6 +227,18 @@ export interface WhatsAppChat {
   color: string;
 }
 
+export interface WhatsAppMedia {
+  kind: 'image' | 'video' | 'audio' | 'document' | 'sticker';
+  mimetype: string | null;
+  fileName: string | null;
+  fileLength: number | null;
+  seconds: number | null;
+  ptt: boolean;
+  width: number | null;
+  height: number | null;
+  url?: string | null;
+}
+
 export interface WhatsAppMessage {
   id: string;
   chatId: string;
@@ -236,6 +248,7 @@ export interface WhatsAppMessage {
   timestamp: number;
   fromMe: boolean;
   type: 'text' | 'media';
+  media?: WhatsAppMedia | null;
 }
 
 export interface WhatsAppMessageEvent {

@@ -39,6 +39,7 @@ import {
   WhatsAppError,
   bootstrapWhatsApp,
   connect as connectWhatsApp,
+  getMedia as getWhatsAppMedia,
   getStatus as getWhatsAppStatus,
   isMockMode as isWhatsAppMock,
   logout as logoutWhatsApp,
@@ -1076,6 +1077,45 @@ app.post('/api/whatsapp/chats/:jid/read', (req, res) => {
     throw whatsappError(error);
   }
 });
+
+app.get(
+  '/api/whatsapp/media/:id',
+  asyncRoute(async (req, res) => {
+    const id = trim(req.params.id, 200);
+    if (!id) {
+      throw new HttpError(400, 'whatsapp_media_invalid', 'Invalid media ID.');
+    }
+
+    let media;
+    try {
+      media = await getWhatsAppMedia(id);
+    } catch (error) {
+      throw whatsappError(error);
+    }
+
+    const fallback = {
+      image: 'image/jpeg',
+      sticker: 'image/webp',
+      audio: 'audio/ogg',
+      video: 'video/mp4',
+      document: 'application/octet-stream',
+    };
+    const mimetype = media.mimetype || fallback[media.kind] || 'application/octet-stream';
+    const fileName = media.fileName || 'media';
+    const safeName = fileName.replace(/[^\x20-\x7E]/g, '_').replace(/["\\\r\n]/g, '_');
+    res.setHeader('Content-Type', mimetype);
+    res.setHeader('Content-Length', media.buffer.length);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('Accept-Ranges', 'none');
+    res.setHeader(
+      'Content-Disposition',
+      media.kind === 'document'
+        ? `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
+        : 'inline',
+    );
+    res.send(media.buffer);
+  }),
+);
 
 app.get('/api/whatsapp/events', (req, res) => {
   res.status(200);

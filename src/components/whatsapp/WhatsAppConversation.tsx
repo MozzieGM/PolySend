@@ -1,13 +1,18 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   CheckCheck,
+  Download,
+  FileText,
+  ImageOff,
   Loader2,
   MessageCircle,
   Send,
   Sparkles,
+  X,
 } from 'lucide-react';
 import {
+  formatBytes,
   formatDayLabel,
   formatMessageTime,
   sameDay,
@@ -19,6 +24,100 @@ import type {
   WhatsAppMessage,
 } from '../../types';
 import { WhatsAppAvatar } from './WhatsAppAvatar';
+
+function mediaSource(message: WhatsAppMessage): string {
+  if (message.media?.url) return message.media.url;
+  return `/api/whatsapp/media/${encodeURIComponent(message.id)}`;
+}
+
+function WhatsAppMediaContent({
+  message,
+  onOpen,
+}: {
+  message: WhatsAppMessage;
+  onOpen: (src: string) => void;
+}) {
+  const { t } = useI18n();
+  const [failed, setFailed] = useState(false);
+  const media = message.media;
+  if (!media) return null;
+  const src = mediaSource(message);
+
+  if (failed) {
+    return (
+      <div className="wa-media-failed">
+        <ImageOff size={16} strokeWidth={1.8} />
+        <span>{t('whatsapp.mediaUnavailable')}</span>
+      </div>
+    );
+  }
+
+  if (media.kind === 'image' || media.kind === 'sticker') {
+    return (
+      <button
+        type="button"
+        className={`wa-media-image ${media.kind === 'sticker' ? 'is-sticker' : ''}`}
+        onClick={() => onOpen(src)}
+        title={message.text || media.fileName || 'Photo'}
+      >
+        <img
+          src={src}
+          alt={message.text || media.fileName || 'Photo'}
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
+      </button>
+    );
+  }
+
+  if (media.kind === 'video') {
+    return (
+      <video
+        className="wa-media-video"
+        src={src}
+        controls
+        preload="metadata"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  if (media.kind === 'audio') {
+    return (
+      <div className="wa-media-audio">
+        <audio src={src} controls preload="metadata" onError={() => setFailed(true)} />
+        {media.seconds != null && (
+          <span>
+            {media.ptt ? 'Voice' : 'Audio'} · {Math.round(media.seconds)}s
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <a
+      className="wa-media-doc"
+      href={src}
+      download={media.fileName || 'document'}
+      target="_blank"
+      rel="noreferrer"
+    >
+      <span className="wa-doc-icon">
+        <FileText size={17} strokeWidth={1.9} />
+      </span>
+      <span className="wa-doc-copy">
+        <strong>{media.fileName || 'Document'}</strong>
+        <small>
+          {[media.mimetype?.split('/').pop()?.toUpperCase(), formatBytes(media.fileLength)]
+            .filter(Boolean)
+            .join(' · ')}
+        </small>
+      </span>
+      <Download size={14} strokeWidth={2} />
+    </a>
+  );
+}
 
 interface WhatsAppConversationProps {
   chat: WhatsAppChat;
@@ -52,6 +151,7 @@ export function WhatsAppConversation({
   const { locale, t } = useI18n();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const groups = useMemo(() => {
     const result: { day: number; items: WhatsAppMessage[] }[] = [];
@@ -142,14 +242,21 @@ export function WhatsAppConversation({
                   <div
                     className={`wa-message ${own ? 'is-own' : 'is-incoming'} ${
                       message.type === 'media' ? 'is-media' : ''
-                    }`}
+                    } ${message.media?.kind === 'sticker' ? 'is-sticker' : ''}`}
                     key={message.id}
                   >
                     <div className="wa-bubble">
                       {!own && chat.isGroup && (
                         <span className="wa-bubble-sender">{message.senderName}</span>
                       )}
-                      <p>{message.text}</p>
+                      {message.media ? (
+                        <>
+                          <WhatsAppMediaContent message={message} onOpen={setLightbox} />
+                          {message.text && <p className="wa-media-caption">{message.text}</p>}
+                        </>
+                      ) : (
+                        <p>{message.text}</p>
+                      )}
                       <span className="wa-bubble-meta">
                         {formatMessageTime(message.timestamp, locale)}
                         {own && <CheckCheck size={11} strokeWidth={2.2} />}
@@ -223,6 +330,32 @@ export function WhatsAppConversation({
           {me && <span>{me.name}</span>}
         </div>
       </footer>
+
+      {lightbox && (
+        <div
+          className="wa-lightbox"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            type="button"
+            className="wa-lightbox-close"
+            aria-label={t('key.close')}
+            onClick={(event) => {
+              event.stopPropagation();
+              setLightbox(null);
+            }}
+          >
+            <X size={18} strokeWidth={2.2} />
+          </button>
+          <img
+            src={lightbox}
+            alt=""
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      )}
     </section>
   );
 }

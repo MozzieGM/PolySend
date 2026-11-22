@@ -156,6 +156,13 @@ export function initials(name: string): string {
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
 }
 
+export function formatBytes(value: number | null | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return '';
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(value < 10 * 1024 ? 1 : 0)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function truncate(value: string, max: number): string {
   const clean = value.trim().replace(/\s+/g, ' ');
   if (clean.length <= max) return clean;

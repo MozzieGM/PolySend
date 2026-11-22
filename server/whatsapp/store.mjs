@@ -7,11 +7,31 @@ const MAX_CHATS = 300;
 const chats = new Map();
 const messages = new Map();
 const contacts = new Map();
+const mediaRaw = new Map();
+const MAX_MEDIA_RAW = 800;
 
 let storePath = null;
 let saveTimer = null;
 
 const PALETTE = ['#c8f751', '#58e39a', '#7cc4ff', '#ffb86b', '#d99bff', '#ff8fa3'];
+
+const MOCK_IMAGE = `data:image/svg+xml,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10150a"/>
+      <stop offset="1" stop-color="#07090c"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="400" fill="url(#g)"/>
+  <circle cx="90" cy="80" r="120" fill="#c8f751" opacity="0.14"/>
+  <circle cx="560" cy="330" r="150" fill="#58e39a" opacity="0.12"/>
+  <rect x="48" y="48" width="544" height="304" rx="24" fill="none" stroke="#c8f751" stroke-opacity="0.28"/>
+  <text x="86" y="190" fill="#f3efe4" font-family="Arial, sans-serif" font-size="44" font-weight="700">PolySend</text>
+  <text x="86" y="230" fill="#c8f751" font-family="Arial, sans-serif" font-size="20" letter-spacing="2">WHATSAPP STUDIO</text>
+  <text x="86" y="282" fill="#99a1a8" font-family="Arial, sans-serif" font-size="16">Mock media preview</text>
+</svg>
+`)}`;
 
 function hash(value) {
   let result = 0;
@@ -109,17 +129,49 @@ export function getMessages(jid) {
   return [...(messages.get(jid) ?? [])].sort((a, b) => a.timestamp - b.timestamp);
 }
 
+function previewFor(message) {
+  if (message.text) return message.text;
+  const media = message.media;
+  if (!media) return '';
+  if (media.kind === 'image') return '📷 Photo';
+  if (media.kind === 'video') return '🎥 Video';
+  if (media.kind === 'audio') return media.ptt ? '🎤 Voice message' : '🎵 Audio';
+  if (media.kind === 'document') return `📎 ${media.fileName || 'Document'}`;
+  if (media.kind === 'sticker') return 'Sticker';
+  return 'Media';
+}
+
 export function addMessage(message) {
   if (!message?.chatId) return null;
   const list = messages.get(message.chatId) ?? [];
-  if (list.some((item) => item.id === message.id)) return null;
+  const existingIndex = list.findIndex((item) => item.id === message.id);
+
+  if (existingIndex >= 0) {
+    const existing = list[existingIndex];
+    const merged = {
+      ...existing,
+      ...message,
+      text: message.text || existing.text,
+      media: message.media ?? existing.media ?? null,
+    };
+    list[existingIndex] = merged;
+    messages.set(message.chatId, list);
+    const chat = upsertChat(message.chatId, {
+      lastMessage: previewFor(merged),
+      lastMessageAt: merged.timestamp,
+      lastMessageFromMe: Boolean(merged.fromMe),
+      isGroup: message.chatId.endsWith('@g.us'),
+    });
+    saveSoon();
+    return chat;
+  }
 
   list.push(message);
   if (list.length > MAX_MESSAGES_PER_CHAT) list.splice(0, list.length - MAX_MESSAGES_PER_CHAT);
   messages.set(message.chatId, list);
 
   const chat = upsertChat(message.chatId, {
-    lastMessage: message.text || (message.type === 'media' ? 'Media' : ''),
+    lastMessage: previewFor(message),
     lastMessageAt: message.timestamp,
     lastMessageFromMe: Boolean(message.fromMe),
     isGroup: message.chatId.endsWith('@g.us'),
@@ -140,6 +192,25 @@ export function markChatRead(jid) {
   return chat;
 }
 
+export function setMediaRaw(id, raw) {
+  if (!id || !raw?.message) return;
+  mediaRaw.set(id, raw);
+  if (mediaRaw.size > MAX_MEDIA_RAW) {
+    const oldest = mediaRaw.keys().next().value;
+    if (oldest) mediaRaw.delete(oldest);
+  }
+  saveSoon();
+}
+
+export function getMediaRaw(id) {
+  return mediaRaw.get(id) ?? null;
+}
+
+export function clearMediaRaw() {
+  mediaRaw.clear();
+  saveSoon();
+}
+
 export function resetUnreadForOwnMessage(jid) {
   const chat = chats.get(jid);
   if (!chat) return;
@@ -151,7 +222,12 @@ export function initStore(file) {
   storePath = file;
   try {
     const raw = fs.readFileSync(file, 'utf8');
-    const data = JSON.parse(raw);
+    const data = JSON.parse(raw, (_key, value) => {
+      if (value && value.type === 'Buffer' && Array.isArray(value.data)) {
+        return Buffer.from(value.data);
+      }
+      return value;
+    });
     for (const chat of data.chats ?? []) {
       if (!chat?.id) continue;
       chats.set(chat.id, {
@@ -171,6 +247,9 @@ export function initStore(file) {
     for (const [jid, name] of Object.entries(data.contacts ?? {})) {
       if (typeof name === 'string') contacts.set(jid, name);
     }
+    for (const [id, item] of Object.entries(data.mediaRaw ?? {})) {
+      if (item?.message) mediaRaw.set(id, item);
+    }
   } catch {
     /* first run */
   }
@@ -182,6 +261,7 @@ function saveNow() {
     chats: [...chats.values()],
     messages: Object.fromEntries(messages),
     contacts: Object.fromEntries(contacts),
+    mediaRaw: Object.fromEntries(mediaRaw),
   };
   const temp = path.join(path.dirname(storePath), `.${path.basename(storePath)}.tmp`);
   try {
@@ -211,6 +291,22 @@ export function seedMockChats() {
       messages: [
         { fromMe: true, text: 'Oi Julia! Tudo bem? Separei o escopo do projeto de logística.', offset: -3_600_000 },
         { fromMe: false, text: 'Oi! Tudo ótimo 😊 Pode mandar que eu reviso hoje.', offset: -3_420_000 },
+        {
+          fromMe: false,
+          text: 'Segue o mock da tela 👇',
+          offset: -3_380_000,
+          media: {
+            kind: 'image',
+            mimetype: 'image/svg+xml',
+            fileName: 'preview.svg',
+            fileLength: null,
+            seconds: null,
+            ptt: false,
+            width: 640,
+            height: 400,
+            url: MOCK_IMAGE,
+          },
+        },
         { fromMe: true, text: 'Perfeito. O prazo de oito semanas inclui discovery, build e testes.', offset: -3_300_000 },
         { fromMe: false, text: 'Gostei. Consegue incluir uma estimativa de custo por fase?', offset: -1_800_000 },
       ],
@@ -261,7 +357,8 @@ export function seedMockChats() {
         text: message.text,
         timestamp: now + message.offset,
         fromMe: message.fromMe,
-        type: 'text',
+        type: message.media ? 'media' : 'text',
+        media: message.media ?? null,
       });
     });
     const entry = chats.get(chat.id);

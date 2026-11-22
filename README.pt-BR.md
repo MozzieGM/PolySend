@@ -193,6 +193,8 @@ segundo adaptador entra sem alterar o estúdio.
 
 ![Preview do WhatsApp Studio](img/whatsapp-preview.png)
 
+![Preview de mídia no WhatsApp](img/whatsapp-media.png)
+
 Alterne para **WhatsApp** no header. O workspace tem três painéis: conversas à esquerda, a thread
 ao vivo no centro e o copiloto de IA à direita.
 
@@ -219,8 +221,10 @@ para experimentar.
   full sync ser habilitado, use **Importar conversas antigas** (ou Desconecte e escaneie o QR
   novamente) uma vez; a lista se preenche sozinha conforme os lotes chegam.
 - Conversas e mensagens recentes ficam em cache em `.wa-store.json` (fora do Git).
-- Mensagens de mídia aparecem como rótulos (`Foto`, `Mensagem de voz`, `Documento`). Anexos,
-  áudios, reações e chamadas ainda não estão implementados.
+- **Mídia é exibida inline**: fotos e stickers abrem em lightbox, vídeos e áudios usam os players
+  nativos, e documentos baixam com o nome original. A mídia é baixada sob demanda e fica em cache
+  na memória durante a sessão do servidor.
+- Enviar anexos pelo composer, reações e chamadas ainda não estão implementados.
 
 ### 3. Escrever com o copiloto de IA
 
@@ -253,6 +257,7 @@ OpenCode Go de verdade. Remova `WHATSAPP_MOCK` (ou use `0`) para usar o WhatsApp
 | GET    | `/api/whatsapp/chats/:jid/messages` | mensagens de uma conversa e marca como lida |
 | POST   | `/api/whatsapp/chats/:jid/messages` | envia uma mensagem de texto |
 | POST   | `/api/whatsapp/chats/:jid/read` | zera o contador de não lidas |
+| GET    | `/api/whatsapp/media/:id` | baixa e serve foto, vídeo, áudio ou documento |
 | GET    | `/api/whatsapp/events` | stream SSE de status, conversas e novas mensagens |
 | POST   | `/api/whatsapp/ai/stream` | transmite o rascunho da IA (`delta`, `usage`, `done`) |
 
@@ -294,7 +299,7 @@ server/
     templates.mjs         template HTML inline a partir do texto puro
     store.mjs             histórico de envios por sessão
   whatsapp/
-    session.mjs           socket Baileys, QR, reconexão, mensagens
+    session.mjs           socket Baileys, QR, reconexão, mensagens e mídia
     store.mjs             cache de conversas/mensagens (`.wa-store.json`)
     prompts.mjs           prompts do copiloto de WhatsApp
 ```
@@ -319,6 +324,7 @@ server/
 | GET    | `/api/whatsapp/chats` | lista de conversas, mais recentes primeiro |
 | GET    | `/api/whatsapp/chats/:jid/messages` | mensagens de uma conversa |
 | POST   | `/api/whatsapp/chats/:jid/messages` | envia uma mensagem de texto |
+| GET    | `/api/whatsapp/media/:id` | baixa e serve foto, vídeo, áudio ou documento |
 | GET    | `/api/whatsapp/events` | SSE de status, conversas e mensagens |
 | POST   | `/api/whatsapp/ai/stream` | transmite o rascunho da IA (`delta`, `usage`, `done`) |
 
