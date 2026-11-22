@@ -241,6 +241,11 @@ para experimentar.
 
 ### 3. Escrever com o copiloto de IA
 
+![Seletor de modelos do WhatsApp](img/whatsapp-models.png)
+
+- O campo **Modelo** abre o mesmo catálogo Go do estúdio de e-mail, com os **modelos grátis
+  primeiro**, preços de entrada/saída por 1M de tokens, tamanho de contexto, badges ZDR e limites
+  do plano. Escolha um modelo sem sair da conversa.
 - O copiloto lê as últimas mensagens da conversa selecionada e usa isso como contexto.
 - Escolha **instrução**, **tom**, **extensão** e **idioma**. O idioma é detectado automaticamente
   pela conversa, e você pode sobrescrever.

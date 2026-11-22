@@ -238,6 +238,11 @@ for experiments.
 
 ### 3. Write with the AI copilot
 
+![WhatsApp model picker](img/whatsapp-models.png)
+
+- The **Model** field opens the same Go catalog used by the email studio, with **free models
+  first**, input/output prices per 1M tokens, context size, ZDR badges, and plan limits. Pick a
+  model without leaving the chat.
 - The copilot reads the last messages of the selected chat and uses them as context.
 - Choose an **instruction**, **tone**, **length**, and **language**. The language is detected from
   the conversation automatically, and you can override it.

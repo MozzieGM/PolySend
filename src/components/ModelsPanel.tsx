@@ -25,6 +25,7 @@ interface ModelsPanelProps {
   source: KeySource;
   hasKey: boolean;
   isDrawer?: boolean;
+  sortFreeFirst?: boolean;
   onSelect: (id: string) => void;
   onPlanChange: (plan: Plan) => void;
   onRefresh: () => void;
@@ -49,6 +50,7 @@ export function ModelsPanel({
   source,
   hasKey,
   isDrawer = false,
+  sortFreeFirst = false,
   onSelect,
   onPlanChange,
   onRefresh,
@@ -61,7 +63,7 @@ export function ModelsPanel({
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return models.filter((model) => {
+    const list = models.filter((model) => {
       if (filter === 'destaques' && !model.go.featured) return false;
       if (filter === 'gratis' && !model.free) return false;
       if (filter === 'zdr' && !model.go.zdr) return false;
@@ -72,7 +74,13 @@ export function ModelsPanel({
         (model.description ?? '').toLowerCase().includes(term)
       );
     });
-  }, [models, filter, query]);
+    if (!sortFreeFirst) return list;
+    return [...list].sort((a, b) => {
+      if (a.free !== b.free) return a.free ? -1 : 1;
+      if (a.price.input !== b.price.input) return a.price.input - b.price.input;
+      return a.name.localeCompare(b.name);
+    });
+  }, [models, filter, query, sortFreeFirst]);
 
   const planLabel = PLAN_LABELS[plan];
   const planPrice = PLAN_PRICES[plan][locale];

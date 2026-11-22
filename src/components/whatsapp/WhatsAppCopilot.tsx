@@ -1,13 +1,15 @@
 import {
   AlertCircle,
+  ChevronDown,
   CornerDownLeft,
+  Cpu,
   KeyRound,
   Loader2,
   Sparkles,
   Square,
   X,
 } from 'lucide-react';
-import { formatDuration } from '../../lib/format';
+import { formatDuration, formatTokens, formatUSD } from '../../lib/format';
 import { useI18n } from '../../lib/i18n';
 import { whatsAppAvatarUrl } from '../../lib/whatsapp';
 import type {
@@ -28,8 +30,7 @@ interface WhatsAppCopilotProps {
   chat: WhatsAppChat | null;
   mock: boolean;
   hasKey: boolean;
-  models: Model[];
-  modelId: string;
+  selectedModel: Model | null;
   instruction: string;
   tone: Tone;
   length: EmailLength;
@@ -39,7 +40,7 @@ interface WhatsAppCopilotProps {
   error: string | null;
   usage: StreamUsage | null;
   elapsedMs: number | null;
-  onModelChange: (id: string) => void;
+  onOpenModels: () => void;
   onInstructionChange: (value: string) => void;
   onToneChange: (tone: Tone) => void;
   onLengthChange: (length: EmailLength) => void;
@@ -55,8 +56,7 @@ export function WhatsAppCopilot({
   chat,
   mock,
   hasKey,
-  models,
-  modelId,
+  selectedModel,
   instruction,
   tone,
   length,
@@ -66,7 +66,7 @@ export function WhatsAppCopilot({
   error,
   usage,
   elapsedMs,
-  onModelChange,
+  onOpenModels,
   onInstructionChange,
   onToneChange,
   onLengthChange,
@@ -80,7 +80,7 @@ export function WhatsAppCopilot({
   const { t } = useI18n();
   const words = draft.trim() ? draft.trim().split(/\s+/).length : 0;
   const tokens = usage?.total_tokens ?? null;
-  const canGenerate = Boolean(chat) && hasKey && Boolean(modelId) && !streaming;
+  const canGenerate = Boolean(chat) && hasKey && Boolean(selectedModel) && !streaming;
 
   return (
     <aside className="wa-copilot">
@@ -135,20 +135,36 @@ export function WhatsAppCopilot({
               </div>
             )}
 
-            <label className="wa-field">
+            <div className="wa-field">
               <span className="field-label">{t('whatsapp.aiModel')}</span>
-              <select
-                value={modelId}
-                onChange={(event) => onModelChange(event.target.value)}
+              <button
+                type="button"
+                className="wa-model-trigger"
+                onClick={onOpenModels}
                 disabled={streaming}
+                title={t('whatsapp.changeModel')}
               >
-                {models.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <span className="wa-model-trigger-icon">
+                  <Cpu size={14} strokeWidth={2.1} />
+                </span>
+                <span className="wa-model-trigger-copy">
+                  <strong>{selectedModel?.name ?? t('whatsapp.aiNoModel')}</strong>
+                  <small>
+                    {selectedModel
+                      ? `${formatUSD(selectedModel.price.input, 2)} in → ${formatUSD(
+                          selectedModel.price.output,
+                          2,
+                        )} out /1M · ${formatTokens(selectedModel.context)} ctx`
+                      : t('whatsapp.modelOpenHint')}
+                  </small>
+                </span>
+                {selectedModel?.free && (
+                  <span className="mini-badge free">{t('models.badgeFree')}</span>
+                )}
+                <ChevronDown size={13} strokeWidth={2.2} />
+              </button>
+              <span className="wa-model-hint">{t('whatsapp.modelFreeFirst')}</span>
+            </div>
 
             <label className="wa-field">
               <span className="field-label">{t('whatsapp.aiInstruction')}</span>

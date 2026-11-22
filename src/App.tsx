@@ -841,7 +841,14 @@ export default function App() {
           hasKey={hasKey}
           models={models}
           selectedModel={selectedModel}
+          plan={plan}
+          modelsLoading={modelsLoading}
+          modelsError={modelsError}
+          modelsFetchedAt={modelsFetchedAt}
+          modelsSource={modelsSource}
           onModelChange={handleWorkspaceModelChange}
+          onPlanChange={handlePlanChange}
+          onRefreshModels={() => void handleRefreshCatalog()}
           onOpenKey={() => setKeyModalOpen(true)}
         />
       ) : (

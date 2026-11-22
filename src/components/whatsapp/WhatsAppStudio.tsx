@@ -17,8 +17,10 @@ import { pickReasoningEffort } from '../../lib/models';
 import { useI18n } from '../../lib/i18n';
 import type {
   EmailLength,
+  KeySource,
   Language,
   Model,
+  Plan,
   StreamUsage,
   Tone,
   WhatsAppChat,
@@ -30,13 +32,21 @@ import { WhatsAppConnect } from './WhatsAppConnect';
 import { WhatsAppConversation } from './WhatsAppConversation';
 import { WhatsAppCopilot } from './WhatsAppCopilot';
 import { WhatsAppProfileModal } from './WhatsAppProfileModal';
+import { WhatsAppModelModal } from './WhatsAppModelModal';
 
 interface WhatsAppStudioProps {
   storedKey: string;
   hasKey: boolean;
   models: Model[];
   selectedModel: Model | null;
+  plan: Plan;
+  modelsLoading: boolean;
+  modelsError: string | null;
+  modelsFetchedAt: string | null;
+  modelsSource: KeySource;
   onModelChange: (id: string) => void;
+  onPlanChange: (plan: Plan) => void;
+  onRefreshModels: () => void;
   onOpenKey: () => void;
 }
 
@@ -50,7 +60,14 @@ export function WhatsAppStudio({
   hasKey,
   models,
   selectedModel,
+  plan,
+  modelsLoading,
+  modelsError,
+  modelsFetchedAt,
+  modelsSource,
   onModelChange,
+  onPlanChange,
+  onRefreshModels,
   onOpenKey,
 }: WhatsAppStudioProps) {
   const { locale, t } = useI18n();
@@ -91,6 +108,7 @@ export function WhatsAppStudio({
   const aiLanguageTouched = useRef(false);
   const [mobilePane, setMobilePane] = useState<'list' | 'chat' | 'copilot'>('list');
   const [profileJid, setProfileJid] = useState<string | null>(null);
+  const [modelPickerOpen, setModelPickerOpen] = useState(false);
 
   const activeChat = useMemo(
     () => chats.find((chat) => chat.id === activeJid) ?? null,
@@ -525,8 +543,7 @@ export function WhatsAppStudio({
           chat={activeChat}
           mock={Boolean(status.mock)}
           hasKey={hasKey}
-          models={models}
-          modelId={selectedModel?.id ?? ''}
+          selectedModel={selectedModel}
           instruction={aiInstruction}
           tone={aiTone}
           length={aiLength}
@@ -536,7 +553,7 @@ export function WhatsAppStudio({
           error={aiError}
           usage={aiUsage}
           elapsedMs={aiElapsed}
-          onModelChange={onModelChange}
+          onOpenModels={() => setModelPickerOpen(true)}
           onInstructionChange={setAiInstruction}
           onToneChange={setAiTone}
           onLengthChange={setAiLength}
@@ -551,6 +568,24 @@ export function WhatsAppStudio({
 
       {profileJid && (
         <WhatsAppProfileModal jid={profileJid} onClose={() => setProfileJid(null)} />
+      )}
+
+      {modelPickerOpen && (
+        <WhatsAppModelModal
+          models={models}
+          selectedId={selectedModel?.id ?? ''}
+          plan={plan}
+          loading={modelsLoading}
+          error={modelsError}
+          fetchedAt={modelsFetchedAt}
+          source={modelsSource}
+          hasKey={hasKey}
+          onSelect={onModelChange}
+          onPlanChange={onPlanChange}
+          onRefresh={onRefreshModels}
+          onOpenKey={onOpenKey}
+          onClose={() => setModelPickerOpen(false)}
+        />
       )}
       </>
     );
