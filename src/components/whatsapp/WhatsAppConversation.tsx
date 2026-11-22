@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   CheckCheck,
+  ChevronDown,
+  Cpu,
   Download,
   FileText,
   ImageOff,
@@ -15,13 +17,14 @@ import {
   formatBytes,
   formatDayLabel,
   formatMessageTime,
+  formatUSD,
   sameDay,
 } from '../../lib/format';
 import { useI18n } from '../../lib/i18n';
 import { whatsAppAvatarUrl } from '../../lib/whatsapp';
 import type {
+  Model,
   WhatsAppChat,
-  WhatsAppMe,
   WhatsAppMessage,
 } from '../../types';
 import { WhatsAppAvatar } from './WhatsAppAvatar';
@@ -123,7 +126,7 @@ function WhatsAppMediaContent({
 interface WhatsAppConversationProps {
   chat: WhatsAppChat;
   messages: WhatsAppMessage[];
-  me: WhatsAppMe | null;
+  model: Model | null;
   draft: string;
   sending: boolean;
   aiStreaming: boolean;
@@ -134,13 +137,14 @@ interface WhatsAppConversationProps {
   onSend: () => void;
   onOpenAi: () => void;
   onOpenProfile: () => void;
+  onOpenModels: () => void;
   onBack: () => void;
 }
 
 export function WhatsAppConversation({
   chat,
   messages,
-  me,
+  model,
   draft,
   sending,
   aiStreaming,
@@ -151,6 +155,7 @@ export function WhatsAppConversation({
   onSend,
   onOpenAi,
   onOpenProfile,
+  onOpenModels,
   onBack,
 }: WhatsAppConversationProps) {
   const { locale, t } = useI18n();
@@ -339,8 +344,23 @@ export function WhatsAppConversation({
           </button>
         </div>
         <div className="wa-composer-foot">
+          <button
+            type="button"
+            className="wa-composer-model"
+            onClick={onOpenModels}
+            title={t('whatsapp.changeModel')}
+          >
+            <Cpu size={10} strokeWidth={2.1} />
+            <span>{model?.name ?? t('whatsapp.aiNoModel')}</span>
+            {model?.free && <b>{t('models.badgeFree')}</b>}
+            {model && (
+              <small>
+                {formatUSD(model.price.input, 2)}→{formatUSD(model.price.output, 2)}/1M
+              </small>
+            )}
+            <ChevronDown size={9} strokeWidth={2.2} />
+          </button>
           <span>{t('whatsapp.sendHint')}</span>
-          {me && <span>{me.name}</span>}
         </div>
       </footer>
 

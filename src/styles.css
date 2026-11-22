@@ -3989,6 +3989,61 @@ body {
   font-size: 8px;
   line-height: 1.45;
 }
+.wa-blur-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 11px 7px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dim);
+  font-family: var(--font-ui);
+  font-size: 8px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.wa-blur-toggle:hover {
+  color: var(--text-soft);
+  border-color: var(--line-strong);
+}
+.wa-blur-toggle.is-on {
+  border-color: rgba(200, 247, 81, 0.24);
+  background: rgba(200, 247, 81, 0.045);
+  color: var(--accent);
+}
+.wa-blur-toggle span {
+  flex: 1;
+  text-align: left;
+}
+.wa-blur-switch {
+  position: relative;
+  width: 23px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.09);
+  transition: background 0.15s ease;
+}
+.wa-blur-switch b {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--dim);
+  transition: left 0.15s ease, background 0.15s ease;
+}
+.wa-blur-toggle.is-on .wa-blur-switch {
+  background: rgba(200, 247, 81, 0.18);
+}
+.wa-blur-toggle.is-on .wa-blur-switch b {
+  left: 13px;
+  background: var(--accent);
+}
+
 .wa-sync {
   margin: 0 11px 7px;
   padding: 7px 8px;
@@ -4880,12 +4935,52 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px 8px;
   margin-top: 6px;
   padding: 0 3px;
   font-family: var(--font-mono);
   font-size: 6.5px;
   color: var(--dim);
+}
+.wa-composer-model {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 2px 3px;
+  border: none;
+  background: transparent;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 6.5px;
+  cursor: pointer;
+}
+.wa-composer-model:hover {
+  color: var(--accent);
+}
+.wa-composer-model > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+  color: var(--text-soft);
+  font-weight: 600;
+}
+.wa-composer-model b {
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: rgba(88, 227, 154, 0.1);
+  color: var(--ok);
+  font-size: 5.5px;
+  font-weight: 700;
+}
+.wa-composer-model small {
+  color: var(--dim);
+  font-size: 6px;
+}
+.wa-composer-model > svg:last-child {
+  flex-shrink: 0;
 }
 .wa-conversation-empty {
   align-items: center;
@@ -5323,6 +5418,27 @@ body {
   margin-top: 8px;
   font-size: 9px;
 }
+.wa-ai-session {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+  margin-top: 9px;
+  padding: 7px 8px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 6.5px;
+  color: var(--dim);
+}
+.wa-ai-session span {
+  margin-right: auto;
+  color: var(--muted);
+}
+.wa-ai-session b {
+  font-weight: 600;
+  color: var(--text-soft);
+}
 .wa-copilot-foot {
   margin-top: 9px;
   text-align: center;
@@ -5525,6 +5641,40 @@ body {
   to {
     opacity: 1;
   }
+}
+
+/* Privacy blur */
+.wa-shell.is-blurred .wa-chat-line strong,
+.wa-shell.is-blurred .wa-chat-preview p,
+.wa-shell.is-blurred .wa-conv-title strong,
+.wa-shell.is-blurred .wa-bubble-sender,
+.wa-shell.is-blurred .wa-copilot-context span,
+.wa-shell.is-blurred .wa-account small,
+.wa-profile-card.is-blurred .wa-profile-hero h2,
+.wa-profile-card.is-blurred .wa-profile-hero p,
+.wa-profile-card.is-blurred .wa-profile-row strong.is-mono {
+  filter: blur(5px);
+  user-select: none;
+  transition: filter 0.18s ease;
+}
+.wa-shell.is-blurred .wa-avatar,
+.wa-profile-card.is-blurred .wa-avatar {
+  filter: blur(6px);
+  transition: filter 0.18s ease;
+}
+.wa-shell.is-blurred .wa-chat-item:hover .wa-chat-line strong,
+.wa-shell.is-blurred .wa-chat-item:hover .wa-chat-preview p,
+.wa-shell.is-blurred .wa-chat-item:hover .wa-avatar,
+.wa-shell.is-blurred .wa-conv-profile:hover .wa-conv-title strong,
+.wa-shell.is-blurred .wa-conv-profile:hover .wa-avatar,
+.wa-shell.is-blurred .wa-copilot-context:hover span,
+.wa-shell.is-blurred .wa-account:hover small,
+.wa-shell.is-blurred .wa-account:hover .wa-avatar,
+.wa-profile-card.is-blurred .wa-profile-hero:hover h2,
+.wa-profile-card.is-blurred .wa-profile-hero:hover p,
+.wa-profile-card.is-blurred .wa-profile-hero:hover .wa-avatar,
+.wa-profile-card.is-blurred .wa-profile-row:hover strong.is-mono {
+  filter: none;
 }
 
 /* =========================================================

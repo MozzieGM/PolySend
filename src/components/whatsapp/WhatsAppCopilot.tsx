@@ -9,7 +9,7 @@ import {
   Square,
   X,
 } from 'lucide-react';
-import { formatDuration, formatTokens, formatUSD } from '../../lib/format';
+import { formatCost, formatDuration, formatTokens, formatUSD } from '../../lib/format';
 import { useI18n } from '../../lib/i18n';
 import { whatsAppAvatarUrl } from '../../lib/whatsapp';
 import type {
@@ -40,6 +40,7 @@ interface WhatsAppCopilotProps {
   error: string | null;
   usage: StreamUsage | null;
   elapsedMs: number | null;
+  sessionUsage: { runs: number; tokens: number; cost: number };
   onOpenModels: () => void;
   onInstructionChange: (value: string) => void;
   onToneChange: (tone: Tone) => void;
@@ -66,6 +67,7 @@ export function WhatsAppCopilot({
   error,
   usage,
   elapsedMs,
+  sessionUsage,
   onOpenModels,
   onInstructionChange,
   onToneChange,
@@ -80,6 +82,7 @@ export function WhatsAppCopilot({
   const { t } = useI18n();
   const words = draft.trim() ? draft.trim().split(/\s+/).length : 0;
   const tokens = usage?.total_tokens ?? null;
+  const cost = usage?.opencode?.list_cost ?? usage?.cost ?? null;
   const canGenerate = Boolean(chat) && hasKey && Boolean(selectedModel) && !streaming;
 
   return (
@@ -271,6 +274,7 @@ export function WhatsAppCopilot({
                 <div>
                   {draft && <span>{t('whatsapp.aiWords', { count: words })}</span>}
                   {tokens != null && <span>{t('whatsapp.aiTokens', { count: tokens })}</span>}
+                  {cost != null && <span>{formatCost(cost)}</span>}
                   {elapsedMs != null && <span>{formatDuration(elapsedMs)}</span>}
                 </div>
               </div>
@@ -301,6 +305,19 @@ export function WhatsAppCopilot({
               <CornerDownLeft size={14} strokeWidth={2.2} />
               {t('whatsapp.useDraft')}
             </button>
+
+            {sessionUsage.runs > 0 && (
+              <div className="wa-ai-session">
+                <span>{t('whatsapp.aiSession')}</span>
+                <b>{formatTokens(sessionUsage.tokens)} tok</b>
+                <b>{formatCost(sessionUsage.cost)}</b>
+                <b>
+                  {sessionUsage.runs === 1
+                    ? t('whatsapp.aiOneRun')
+                    : t('whatsapp.aiRuns', { count: sessionUsage.runs })}
+                </b>
+              </div>
+            )}
 
             <p className="wa-copilot-foot">{t('whatsapp.aiDisclaimer')}</p>
           </>

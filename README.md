@@ -195,6 +195,8 @@ without changing the studio itself.
 
 ![WhatsApp contact profile](img/whatsapp-profile.png)
 
+![WhatsApp blur mode](img/whatsapp-blur.png)
+
 Switch to **WhatsApp** in the header. The workspace has three panes: conversations on the left,
 the live thread in the center, and an AI copilot on the right.
 
@@ -248,8 +250,17 @@ for experiments.
   the conversation automatically, and you can override it.
 - **Write with AI** streams the draft token by token into the card. **Use in composer** moves it to
   the message box for a final review.
+- The composer footer shows the active model and its input/output price; click it to open the full
+  catalog. Each draft shows tokens, cost, and elapsed time, and the copilot keeps an AI-session
+  total of runs, tokens, and USD cost.
 - The model comes from the same Go catalog used by the email studio, and the same OpenCode key is
   used.
+
+### Blur names
+
+The **Blur names** toggle in the WhatsApp sidebar blurs contact names, avatars, phone numbers,
+and chat previews for screenshots. Hover over an item to reveal it temporarily. The setting is
+stored in `localStorage` and stays enabled across reloads.
 
 ### Demo mode
 

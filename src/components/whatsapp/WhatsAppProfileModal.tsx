@@ -18,6 +18,7 @@ import { WhatsAppAvatar } from './WhatsAppAvatar';
 
 interface WhatsAppProfileModalProps {
   jid: string;
+  blurred?: boolean;
   onClose: () => void;
 }
 
@@ -43,7 +44,11 @@ function ProfileRow({
   );
 }
 
-export function WhatsAppProfileModal({ jid, onClose }: WhatsAppProfileModalProps) {
+export function WhatsAppProfileModal({
+  jid,
+  blurred = false,
+  onClose,
+}: WhatsAppProfileModalProps) {
   const { locale, t } = useI18n();
   const [profile, setProfile] = useState<WhatsAppProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,7 +112,11 @@ export function WhatsAppProfileModal({ jid, onClose }: WhatsAppProfileModalProps
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="wa-profile-card" role="dialog" aria-modal="true">
+      <div
+        className={`wa-profile-card ${blurred ? 'is-blurred' : ''}`}
+        role="dialog"
+        aria-modal="true"
+      >
         <button
           type="button"
           className="icon-btn wa-profile-close"

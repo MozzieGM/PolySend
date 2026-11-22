@@ -197,6 +197,8 @@ segundo adaptador entra sem alterar o estúdio.
 
 ![Perfil de contato no WhatsApp](img/whatsapp-profile.png)
 
+![Modo blur no WhatsApp](img/whatsapp-blur.png)
+
 Alterne para **WhatsApp** no header. O workspace tem três painéis: conversas à esquerda, a thread
 ao vivo no centro e o copiloto de IA à direita.
 
@@ -251,7 +253,16 @@ para experimentar.
   pela conversa, e você pode sobrescrever.
 - **Escrever com IA** transmite o rascunho token a token no card. **Usar no campo** leva o texto
   para a caixa de mensagem para revisão final.
+- O rodapé do composer mostra o modelo ativo e o preço de entrada/saída; clique para abrir o
+  catálogo completo. Cada rascunho mostra tokens, custo e tempo, e o copiloto mantém um total da
+  sessão de IA (execuções, tokens e custo em USD).
 - O modelo vem do mesmo catálogo Go do estúdio de e-mail e usa a mesma chave do OpenCode.
+
+### Desfocar nomes
+
+O botão **Desfocar nomes** na barra lateral do WhatsApp borra nomes de contatos, avatares,
+números e prévias de conversa para prints. Passe o mouse para revelar temporariamente. A opção
+fica salva no `localStorage` e continua ativa após recarregar.
 
 ### Modo demo
 

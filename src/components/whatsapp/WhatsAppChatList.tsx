@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import {
   AlertCircle,
   ChevronRight,
+  Eye,
+  EyeOff,
   History,
   Loader2,
   LogOut,
@@ -31,6 +33,8 @@ interface WhatsAppChatListProps {
   onReimport: () => void;
   onClearCache: () => void;
   onOpenProfile: (jid: string) => void;
+  blurNames: boolean;
+  onToggleBlur: () => void;
 }
 
 export function WhatsAppChatList({
@@ -48,6 +52,8 @@ export function WhatsAppChatList({
   onReimport,
   onClearCache,
   onOpenProfile,
+  blurNames,
+  onToggleBlur,
 }: WhatsAppChatListProps) {
   const { locale, t } = useI18n();
   const syncing = Boolean(status?.history?.syncing);
@@ -130,6 +136,19 @@ export function WhatsAppChatList({
           aria-label={t('whatsapp.searchChats')}
         />
       </label>
+
+      <button
+        type="button"
+        className={`wa-blur-toggle ${blurNames ? 'is-on' : ''}`}
+        onClick={onToggleBlur}
+        title={t('whatsapp.blurHint')}
+      >
+        {blurNames ? <EyeOff size={12} strokeWidth={2.1} /> : <Eye size={12} strokeWidth={2.1} />}
+        <span>{t('whatsapp.blurNames')}</span>
+        <i className="wa-blur-switch">
+          <b />
+        </i>
+      </button>
 
       {syncing && (
         <div className="wa-sync" role="status">

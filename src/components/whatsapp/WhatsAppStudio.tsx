@@ -109,6 +109,14 @@ export function WhatsAppStudio({
   const [mobilePane, setMobilePane] = useState<'list' | 'chat' | 'copilot'>('list');
   const [profileJid, setProfileJid] = useState<string | null>(null);
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
+  const [blurNames, setBlurNames] = useState(() => {
+    try {
+      return window.localStorage.getItem('polysend_wa_blur') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [aiSession, setAiSession] = useState({ runs: 0, tokens: 0, cost: 0 });
 
   const activeChat = useMemo(
     () => chats.find((chat) => chat.id === activeJid) ?? null,
@@ -393,6 +401,18 @@ export function WhatsAppStudio({
     setMobilePane('copilot');
   };
 
+  const handleToggleBlur = () => {
+    setBlurNames((previous) => {
+      const next = !previous;
+      try {
+        window.localStorage.setItem('polysend_wa_blur', next ? '1' : '0');
+      } catch {
+        /* noop */
+      }
+      return next;
+    });
+  };
+
   const handleGenerate = async () => {
     if (!activeChat) {
       setAiError(t('whatsapp.aiNeedsChat'));
@@ -430,7 +450,15 @@ export function WhatsAppStudio({
         storedKey || undefined,
         {
           onDelta: (text) => setAiDraft((previous) => previous + text),
-          onUsage: (usage) => setAiUsage(usage),
+          onUsage: (usage) => {
+            setAiUsage(usage);
+            const cost = usage.opencode?.list_cost ?? usage.cost ?? 0;
+            setAiSession((previous) => ({
+              runs: previous.runs + 1,
+              tokens: previous.tokens + (usage.total_tokens ?? 0),
+              cost: previous.cost + cost,
+            }));
+          },
           onDone: (payload) => setAiElapsed(payload.elapsedMs ?? null),
           onError: (error) => setAiError(error.message),
         },
@@ -476,7 +504,7 @@ export function WhatsAppStudio({
       <main
         className={`wa-shell ${mobilePane === 'chat' ? 'wa-pane-chat' : ''} ${
           mobilePane === 'copilot' ? 'wa-pane-copilot' : ''
-        }`}
+        } ${blurNames ? 'is-blurred' : ''}`}
       >
         <WhatsAppChatList
           chats={chats}
@@ -493,13 +521,15 @@ export function WhatsAppStudio({
           onReimport={() => void handleReimport()}
           onClearCache={() => void handleClearCache()}
           onOpenProfile={setProfileJid}
+          blurNames={blurNames}
+          onToggleBlur={handleToggleBlur}
         />
 
         {activeChat ? (
           <WhatsAppConversation
             chat={activeChat}
             messages={messages}
-            me={status.me}
+            model={selectedModel}
             draft={draft}
             sending={sending}
             aiStreaming={aiStreaming}
@@ -510,6 +540,7 @@ export function WhatsAppStudio({
             onSend={() => void handleSend()}
             onOpenAi={handleOpenAi}
             onOpenProfile={() => setProfileJid(activeChat.id)}
+            onOpenModels={() => setModelPickerOpen(true)}
             onBack={() => setMobilePane('list')}
           />
         ) : (
@@ -553,6 +584,7 @@ export function WhatsAppStudio({
           error={aiError}
           usage={aiUsage}
           elapsedMs={aiElapsed}
+          sessionUsage={aiSession}
           onOpenModels={() => setModelPickerOpen(true)}
           onInstructionChange={setAiInstruction}
           onToneChange={setAiTone}
@@ -567,7 +599,11 @@ export function WhatsAppStudio({
       </main>
 
       {profileJid && (
-        <WhatsAppProfileModal jid={profileJid} onClose={() => setProfileJid(null)} />
+        <WhatsAppProfileModal
+          jid={profileJid}
+          blurred={blurNames}
+          onClose={() => setProfileJid(null)}
+        />
       )}
 
       {modelPickerOpen && (
