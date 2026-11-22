@@ -323,7 +323,7 @@ function whatsappError(error) {
 }
 
 const SUBJECT_RE =
-  /^\s*(?:#+\s*)?(?:\*\*|__)?\s*(assunto|subject)\s*(?:\*\*|__)?\s*[:：\-–—]\s*(.*?)\s*$/i;
+  /^\s*(?:#+\s*)?(?:\*\*|__)?\s*(assunto|subject|asunto)\s*(?:\*\*|__)?\s*[:：\-–—]\s*(.*?)\s*$/i;
 
 function parseSubjectLine(line) {
   const match = line.replace(/\r$/, '').match(SUBJECT_RE);
