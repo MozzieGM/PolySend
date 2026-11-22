@@ -15,6 +15,10 @@ The interface ships in **English (default)** and **Portuguese**, with an EN/PT t
 header. The language used to write the email is a separate field in the brief, so you can have
 an English UI and a Portuguese email.
 
+A second workspace adds a **WhatsApp Studio**: a live chat panel with conversations in real
+time and an AI copilot that writes replies token by token. Switch between **Email** and
+**WhatsApp** in the header.
+
 The live Go catalog (31 models at the moment) shows prices per 1M tokens, the monthly limit per
 model, and real plan usage (5-hour, weekly, and monthly windows). Text is streamed token by token
 over SSE and can be edited, refined, or rewritten by selection.
@@ -22,8 +26,11 @@ over SSE and can be edited, refined, or rewritten by selection.
 When the draft is ready, **Send** delivers it as a real email through **Resend**, with sender
 identity, domain verification, test sends, and per-session delivery history built into the app.
 
+The WhatsApp workspace connects through **Baileys** (unofficial WhatsApp Web API) and keeps the
+same design language: chat list, conversation, and a streaming AI copilot.
+
 ```
-React + Vite  ·  Node/Express  ·  OpenCode Go API  ·  SSE  ·  Resend
+React + Vite  ·  Node/Express  ·  OpenCode Go API  ·  SSE  ·  Resend  ·  Baileys
 ```
 
 ## Run
@@ -75,6 +82,9 @@ Runs at `http://localhost:8787` (Express serves the Vite build and the `/api` ro
 6. **Bilingual UI** — English is the default. Use the **EN/PT** button in the header to switch
    the interface; the choice is saved in `localStorage`. Presets and error messages follow the
    selected language. The output language is chosen in the brief independently.
+7. **WhatsApp Studio** — switch to **WhatsApp** in the header to read and send real chats. The
+   AI copilot uses the recent conversation as context, detects the language being used, and
+   streams the next message into a draft you can edit before sending.
 
 ### Suggested live-demo script
 
@@ -93,7 +103,9 @@ Runs at `http://localhost:8787` (Express serves the Vite build and the `/api` ro
 7. Open **Delivery › Settings**, connect a Resend key, and show the verified domain and sender.
    Then use **Send** on the email, review the recipient, and deliver the draft for real. Show the
    Resend ID and the delivery event in history.
-8. To finish, open the **Console** link in the usage bar or show
+8. Switch to **WhatsApp**, open a chat, and click **Write with AI**. Show the reply being written
+   token by token, use it in the composer, and send it.
+9. To finish, open the **Console** link in the usage bar or show
    `https://opencode.ai/console/go` with the real usage windows.
 
 ## Send with Resend
@@ -175,6 +187,72 @@ Create an adapter in `server/delivery/` that exposes the same operations used by
 it from the delivery routes. The UI already labels the provider, so a second adapter can ship
 without changing the studio itself.
 
+## WhatsApp Studio
+
+![WhatsApp Studio preview](img/whatsapp-preview.png)
+
+Switch to **WhatsApp** in the header. The workspace has three panes: conversations on the left,
+the live thread in the center, and an AI copilot on the right.
+
+### 1. Connect your phone
+
+1. Open **WhatsApp** in the app and click **Connect WhatsApp**.
+2. On your phone, go to **Settings → Linked devices → Link a device**.
+3. Scan the QR code shown in the app.
+
+The session is stored locally in `.wa-auth/` (gitignored). It reconnects automatically after a
+server restart. **Disconnect** removes the auth folder and asks for a new QR code.
+
+This integration uses **Baileys**, an unofficial WhatsApp Web client. Use a number you own, follow
+WhatsApp's terms, and be aware that automation can lead to a ban. Do not use your primary number
+for experiments.
+
+### 2. Chat in real time
+
+- The chat list and open thread update over **SSE** as messages arrive, with unread badges and
+  search.
+- Send with **Enter**; **Shift+Enter** adds a line. Incoming messages, groups, and sent messages
+  are supported.
+- Chats and recent messages are cached in `.wa-store.json` (gitignored). Full WhatsApp history is
+  not downloaded.
+- Media messages appear as labels (`Photo`, `Voice message`, `Document`). Attachments, voice
+  notes, reactions, and calls are not implemented yet.
+
+### 3. Write with the AI copilot
+
+- The copilot reads the last messages of the selected chat and uses them as context.
+- Choose an **instruction**, **tone**, **length**, and **language**. The language is detected from
+  the conversation automatically, and you can override it.
+- **Write with AI** streams the draft token by token into the card. **Use in composer** moves it to
+  the message box for a final review.
+- The model comes from the same Go catalog used by the email studio, and the same OpenCode key is
+  used.
+
+### Demo mode
+
+To explore the chat UI without scanning a QR code:
+
+```powershell
+$env:WHATSAPP_MOCK='1'; npm start
+```
+
+The server seeds four conversations and simulates replies. The AI copilot still calls OpenCode Go
+for real. Unset `WHATSAPP_MOCK` (or set it to `0`) to use the real WhatsApp connection.
+
+### WhatsApp endpoints
+
+| Method | Route | What it does |
+| ------ | ----- | ------------ |
+| GET    | `/api/whatsapp/status` | connection state, QR data URL, linked account |
+| POST   | `/api/whatsapp/connect` | starts the Baileys socket and QR flow |
+| POST   | `/api/whatsapp/logout` | unlinks the device and clears `.wa-auth` |
+| GET    | `/api/whatsapp/chats` | chat list, newest first |
+| GET    | `/api/whatsapp/chats/:jid/messages` | messages for one chat and marks it read |
+| POST   | `/api/whatsapp/chats/:jid/messages` | sends a text message |
+| POST   | `/api/whatsapp/chats/:jid/read` | clears the unread counter |
+| GET    | `/api/whatsapp/events` | SSE stream for status, chats, and new messages |
+| POST   | `/api/whatsapp/ai/stream` | streams the AI draft for a chat (`delta`, `usage`, `done`) |
+
 ## Architecture
 
 ```
@@ -189,9 +267,17 @@ src/
     MobileTabs.tsx        Briefing / Email / Models navigation on phones
     KeyModal.tsx          API configuration from the panel
     DeliveryModal.tsx     Resend key, domains, sender, test send, history
+    whatsapp/
+      WhatsAppStudio.tsx       workspace state, SSE, AI stream, layout
+      WhatsAppChatList.tsx     search, unread badges, chat list
+      WhatsAppConversation.tsx messages, composer, auto-scroll
+      WhatsAppCopilot.tsx      instruction, tone, language, streaming draft
+      WhatsAppConnect.tsx      QR pairing and connection states
+      WhatsAppAvatar.tsx       initials / group avatar
   lib/
     api.ts                fetch + SSE parser
     delivery.ts           delivery API helpers and email parsing
+    whatsapp.ts           chat API, SSE events, AI stream, language detection
     i18n.tsx              English/Portuguese UI dictionaries + provider
     errors.ts             API/stream error localization by code
     presets.ts            localized briefs, tones, lengths, languages
@@ -204,6 +290,10 @@ server/
     env.mjs               persists the panel key into the server .env
     templates.mjs         plain-text to inline-styled HTML template
     store.mjs             per-session send history
+  whatsapp/
+    session.mjs           Baileys socket, QR, reconnect, incoming/sent messages
+    store.mjs             chat/message cache (`.wa-store.json`)
+    prompts.mjs           WhatsApp copilot prompts
 ```
 
 ### Backend endpoints
@@ -220,9 +310,17 @@ server/
 | POST   | `/api/delivery/send` | sends the reviewed draft and records it in session history |
 | GET    | `/api/delivery/history` | lists sends for the current session |
 | GET    | `/api/delivery/history/:id` | refreshes one send's latest Resend event |
+| GET    | `/api/whatsapp/status` | connection state, QR, linked account |
+| POST   | `/api/whatsapp/connect` | starts the Baileys socket and QR flow |
+| POST   | `/api/whatsapp/logout` | unlinks the device and clears `.wa-auth` |
+| GET    | `/api/whatsapp/chats` | chat list, newest first |
+| GET    | `/api/whatsapp/chats/:jid/messages` | messages for one chat |
+| POST   | `/api/whatsapp/chats/:jid/messages` | sends a text message |
+| GET    | `/api/whatsapp/events` | SSE stream for status, chats, and messages |
+| POST   | `/api/whatsapp/ai/stream` | streams the copilot draft (`delta`, `usage`, `done`) |
 
 Delivery routes take the key from `x-resend-key` (panel) or `RESEND_API_KEY` (server) and the
-session from `x-session-id`.
+session from `x-session-id`. WhatsApp routes operate on the single linked account of this server.
 
 The client picks the model, brief, and mode (`generate`, `refine`, or `selection`). The backend
 builds the prompts and calls
@@ -239,9 +337,9 @@ model declares support; models that only accept a high effort keep their default
 
 Go is intended for **coding-agent traffic**, and OpenCode monitors abuse that degrades the
 experience for other users. This demo sends its own User-Agent and a stable
-`x-opencode-session`, but email generation is not Go's primary use case. For a production
-product, use **OpenCode Models pay-as-you-go** or your own provider keys. For a live demo with
-friends, Go works nicely.
+`x-opencode-session`, but email and WhatsApp generation are not Go's primary use case. For a
+production product, use **OpenCode Models pay-as-you-go** or your own provider keys. For a live
+demo with friends, Go works nicely.
 
 ## API keys and security
 
@@ -255,12 +353,19 @@ friends, Go works nicely.
   local demo: do not expose the server publicly without authentication and rate limiting.
 - `.env` is in `.gitignore`. Do not commit your keys. If one leaks, revoke it and create another:
   OpenCode Console under **Account › Personal API keys**, Resend under **API Keys**.
+- `.wa-auth/` contains WhatsApp session credentials and must never be committed or shared.
+  `.wa-store.json` contains cached chats and is also gitignored. **Disconnect** removes the auth
+  folder; deleting the store removes the local chat cache.
+- The WhatsApp integration is unofficial and can lead to account restrictions. Keep the server
+  local and use a number you are willing to risk.
 
 ## Quick customization
 
 - **Change the examples**: `src/lib/presets.ts`.
 - **Change the UI copy / add a language**: `src/lib/i18n.tsx`.
-- **Change the server prompts**: `server/prompts.mjs`.
+- **Change the email prompts**: `server/prompts.mjs`.
+- **Change the WhatsApp copilot prompt**: `server/whatsapp/prompts.mjs`.
+- **Change the demo chats**: `seedMockChats` in `server/whatsapp/store.mjs`.
 - **Change the initial model**: `MODEL_STORAGE`/`selectedId` in `src/App.tsx`.
 - **Change the colors**: CSS variables at the top of `src/styles.css`.
 - **Use another default plan**: the `plan` selector in `src/App.tsx` (Go, Go Plus, Go Teams).
@@ -273,3 +378,5 @@ friends, Go works nicely.
 - Console: <https://opencode.ai/console>
 - Resend API: <https://resend.com/docs/api-reference/introduction>
 - Resend domains: <https://resend.com/docs/dashboard/domains/introduction>
+- Baileys (WhatsApp): <https://github.com/WhiskeySockets/Baileys>
+- WhatsApp linked devices: <https://faq.whatsapp.com/1317564962313205>

@@ -1,8 +1,8 @@
+import './load-env.mjs';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import dotenv from 'dotenv';
 import express from 'express';
 import {
   HttpError,
@@ -35,10 +35,26 @@ import {
   recordSend,
   updateSend,
 } from './delivery/store.mjs';
+import {
+  WhatsAppError,
+  bootstrapWhatsApp,
+  connect as connectWhatsApp,
+  getStatus as getWhatsAppStatus,
+  isMockMode as isWhatsAppMock,
+  logout as logoutWhatsApp,
+  readChat as readWhatsAppChat,
+  sendText as sendWhatsAppText,
+  whatsappEvents,
+} from './whatsapp/session.mjs';
+import {
+  getChat as getWhatsAppChat,
+  getMessages as getWhatsAppMessages,
+  listChats as listWhatsAppChats,
+} from './whatsapp/store.mjs';
+import { buildWhatsAppPrompt } from './whatsapp/prompts.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ENV_PATH = path.resolve(__dirname, '../.env');
-dotenv.config({ path: ENV_PATH, quiet: true });
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8787;
@@ -287,6 +303,21 @@ function sseWrite(res, event, data) {
   }
 }
 
+function whatsappJid(value) {
+  const jid = trim(value, 140);
+  if (!/^[A-Za-z0-9._:-]+@(s\.whatsapp\.net|g\.us|lid)$/.test(jid)) {
+    throw new HttpError(400, 'whatsapp_invalid_chat', 'Invalid WhatsApp chat.');
+  }
+  return jid;
+}
+
+function whatsappError(error) {
+  if (error instanceof WhatsAppError) {
+    return new HttpError(error.status, error.code, error.message);
+  }
+  return error;
+}
+
 const SUBJECT_RE =
   /^\s*(?:#+\s*)?(?:\*\*|__)?\s*(assunto|subject)\s*(?:\*\*|__)?\s*[:：\-–—]\s*(.*?)\s*$/i;
 
@@ -528,6 +559,208 @@ async function handleEmailStream(req, res, next) {
   }
 }
 
+async function handleWhatsAppStream(req, res) {
+  const key = resolveKey(req);
+  if (!key) {
+    throw new HttpError(
+      401,
+      'missing_key',
+      'Nenhuma chave de API configurada. Abra "Configurar API" e cole sua chave do OpenCode Go.',
+    );
+  }
+
+  const body = req.body ?? {};
+  const chatJid = whatsappJid(body.chatJid);
+  const chat = getWhatsAppChat(chatJid);
+  if (!chat) {
+    throw new HttpError(404, 'whatsapp_chat_not_found', 'Chat not found.');
+  }
+
+  const model = trim(body.model, 120);
+  if (!model) {
+    throw new HttpError(400, 'invalid_model', 'Choose a model before generating.');
+  }
+
+  const tone = TONES.has(body.tone) ? body.tone : 'amigavel';
+  const language = LANGUAGES.has(body.language) ? body.language : 'pt-BR';
+  const length = LENGTHS.has(body.length) ? body.length : 'medio';
+  const instruction = trim(body.instruction, 600);
+  const reasoningEffort =
+    typeof body.reasoningEffort === 'string' && EFFORTS.has(body.reasoningEffort)
+      ? body.reasoningEffort
+      : undefined;
+
+  const { messages, maxTokens } = buildWhatsAppPrompt({
+    chatName: chat.name,
+    isGroup: chat.isGroup,
+    history: getWhatsAppMessages(chatJid),
+    instruction,
+    tone,
+    language,
+    length,
+  });
+
+  const sessionId = sessionIdFrom(req);
+  const controller = new AbortController();
+  let clientGone = false;
+  let timedOut = false;
+
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      clientGone = true;
+      controller.abort();
+    }
+  });
+
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, STREAM_TIMEOUT_MS);
+
+  let upstream;
+  try {
+    upstream = await streamCompletion({
+      key,
+      model,
+      messages,
+      maxTokens,
+      reasoningEffort,
+      sessionId,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    clearTimeout(timeout);
+    if (clientGone) return;
+    if (error?.name === 'AbortError' && timedOut) {
+      throw new HttpError(504, 'timeout', 'A API demorou demais para responder. Tente novamente.');
+    }
+    throw error;
+  }
+
+  if (!upstream.body) {
+    clearTimeout(timeout);
+    throw new HttpError(502, 'empty_stream', 'A API não retornou um stream de resposta.');
+  }
+
+  res.status(200);
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  const startedAt = performance.now();
+  const heartbeat = setInterval(() => {
+    if (!res.writableEnded) {
+      try {
+        res.write(': ping\n\n');
+      } catch {
+        /* client disconnected */
+      }
+    }
+  }, HEARTBEAT_MS);
+
+  const reader = upstream.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let text = '';
+  let usage = null;
+  let finishReason = null;
+  let started = false;
+  let thinking = false;
+
+  const handleData = (raw) => {
+    if (!raw || raw === '[DONE]') return;
+    let json;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (json.error) {
+      throw new Error(
+        json.error.message ?? 'A API interrompeu a geração. Tente novamente com outro modelo.',
+      );
+    }
+    if (json.choices?.[0]?.finish_reason) {
+      finishReason = json.choices[0].finish_reason;
+    }
+    const delta = json.choices?.[0]?.delta ?? {};
+    if ((delta.reasoning || delta.reasoning_content) && !thinking) {
+      thinking = true;
+      sseWrite(res, 'status', { phase: 'thinking' });
+    }
+    if (typeof delta.content === 'string' && delta.content.length > 0) {
+      if (!started) {
+        started = true;
+        sseWrite(res, 'status', { phase: 'writing' });
+      }
+      text += delta.content;
+      sseWrite(res, 'delta', { text: delta.content });
+    }
+    if (json.usage) usage = json.usage;
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        handleData(line.slice(5).trim());
+      }
+    }
+
+    if (buffer.startsWith('data:')) handleData(buffer.slice(5).trim());
+
+    if (usage) sseWrite(res, 'usage', usage);
+
+    if (!text.trim()) {
+      sseWrite(res, 'error', {
+        code: 'empty_response',
+        message:
+          'O modelo encerrou sem escrever a mensagem. Tente outro modelo ou gere novamente.',
+      });
+    } else {
+      sseWrite(res, 'done', {
+        elapsedMs: Math.round(performance.now() - startedAt),
+        model,
+        truncated: finishReason === 'length',
+      });
+    }
+  } catch (error) {
+    if (!clientGone) {
+      console.error('  [whatsapp-ai]', model, error?.message ?? error);
+      sseWrite(res, 'error', {
+        code: timedOut ? 'timeout' : 'stream_error',
+        message: timedOut
+          ? 'A API demorou demais para responder. Tente novamente.'
+          : 'A conexão com a API foi interrompida. Tente gerar novamente.',
+      });
+    }
+  } finally {
+    clearTimeout(timeout);
+    clearInterval(heartbeat);
+    try {
+      reader.releaseLock();
+    } catch {
+      /* noop */
+    }
+    if (!res.writableEnded) {
+      try {
+        res.end();
+      } catch {
+        /* client disconnected */
+      }
+    }
+  }
+}
+
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
@@ -535,6 +768,8 @@ app.get('/api/health', (req, res) => {
     resendKeyConfigured: resendServerKeyConfigured(),
     resendProvider: 'resend',
     resendDefaults: resendDefaults(),
+    whatsappState: getWhatsAppStatus().state,
+    whatsappMock: isWhatsAppMock(),
     apiBase: BASE_URL,
     fetchedAt: new Date().toISOString(),
   });
@@ -769,6 +1004,137 @@ app.post(
   }),
 );
 
+app.get('/api/whatsapp/status', (req, res) => {
+  res.json({
+    ...getWhatsAppStatus(),
+    chatCount: listWhatsAppChats().length,
+  });
+});
+
+app.post(
+  '/api/whatsapp/connect',
+  asyncRoute(async (req, res) => {
+    try {
+      const status = await connectWhatsApp();
+      res.json({ ...status, chatCount: listWhatsAppChats().length });
+    } catch (error) {
+      throw whatsappError(error);
+    }
+  }),
+);
+
+app.post(
+  '/api/whatsapp/logout',
+  asyncRoute(async (req, res) => {
+    try {
+      const status = await logoutWhatsApp();
+      res.json({ ...status, chatCount: listWhatsAppChats().length });
+    } catch (error) {
+      throw whatsappError(error);
+    }
+  }),
+);
+
+app.get('/api/whatsapp/chats', (req, res) => {
+  const query = trim(req.query.q, 80);
+  res.json({ chats: listWhatsAppChats(query) });
+});
+
+app.get('/api/whatsapp/chats/:jid/messages', (req, res) => {
+  const jid = whatsappJid(req.params.jid);
+  const chat = getWhatsAppChat(jid);
+  if (!chat) {
+    throw new HttpError(404, 'whatsapp_chat_not_found', 'Chat not found.');
+  }
+  readWhatsAppChat(jid);
+  res.json({ chat: { ...chat, unread: 0 }, messages: getWhatsAppMessages(jid) });
+});
+
+app.post(
+  '/api/whatsapp/chats/:jid/messages',
+  asyncRoute(async (req, res) => {
+    const jid = whatsappJid(req.params.jid);
+    const text = trim(req.body?.text, 4000);
+    if (!text) {
+      throw new HttpError(400, 'whatsapp_empty_message', 'Type a message before sending.');
+    }
+    try {
+      const message = await sendWhatsAppText(jid, text);
+      res.status(201).json({ message, chat: getWhatsAppChat(jid) });
+    } catch (error) {
+      throw whatsappError(error);
+    }
+  }),
+);
+
+app.post('/api/whatsapp/chats/:jid/read', (req, res) => {
+  const jid = whatsappJid(req.params.jid);
+  try {
+    const chat = readWhatsAppChat(jid);
+    res.json({ chat: { ...chat, unread: 0 } });
+  } catch (error) {
+    throw whatsappError(error);
+  }
+});
+
+app.get('/api/whatsapp/events', (req, res) => {
+  res.status(200);
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  const send = (event, data) => sseWrite(res, event, data);
+  const statusWithCount = () => ({
+    ...getWhatsAppStatus(),
+    chatCount: listWhatsAppChats().length,
+  });
+
+  send('status', statusWithCount());
+  send('chats', { chats: listWhatsAppChats() });
+
+  const onStatus = (status) => send('status', { ...status, chatCount: listWhatsAppChats().length });
+  const onMessage = (payload) => send('message', payload);
+  const onChats = (chats) => send('chats', { chats });
+
+  whatsappEvents.on('status', onStatus);
+  whatsappEvents.on('message', onMessage);
+  whatsappEvents.on('chats', onChats);
+
+  const heartbeat = setInterval(() => {
+    if (!res.writableEnded) {
+      try {
+        res.write(': ping\n\n');
+      } catch {
+        /* client disconnected */
+      }
+    }
+  }, HEARTBEAT_MS);
+
+  let closed = false;
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    clearInterval(heartbeat);
+    whatsappEvents.off('status', onStatus);
+    whatsappEvents.off('message', onMessage);
+    whatsappEvents.off('chats', onChats);
+    if (!res.writableEnded) {
+      try {
+        res.end();
+      } catch {
+        /* noop */
+      }
+    }
+  };
+
+  res.on('close', cleanup);
+  req.on('close', cleanup);
+});
+
+app.post('/api/whatsapp/ai/stream', asyncRoute(handleWhatsAppStream));
+
 app.post('/api/email/stream', asyncRoute(handleEmailStream));
 
 const distDir = path.resolve(__dirname, '../dist');
@@ -823,6 +1189,8 @@ app.use((error, req, res, next) => {
   res.status(status).json({ error: { code, message, ...(details ? { details } : {}) } });
 });
 
+void bootstrapWhatsApp();
+
 app.listen(PORT, () => {
   console.log('');
   console.log('  PolySend - API');
@@ -832,6 +1200,9 @@ app.listen(PORT, () => {
   console.log(`  Go key   ${serverKeyConfigured() ? 'carregada do .env' : 'nao configurada'}`);
   console.log(
     `  Resend   ${resendServerKeyConfigured() ? 'chave no .env' : 'aguardando chave pelo painel'}`,
+  );
+  console.log(
+    `  WhatsApp ${isWhatsAppMock() ? 'modo demo (WHATSAPP_MOCK=1)' : getWhatsAppStatus().state}`,
   );
   console.log(`  Upstream ${BASE_URL}`);
   console.log('');

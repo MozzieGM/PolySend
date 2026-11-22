@@ -96,6 +96,66 @@ export function formatRelative(
   return locale === 'pt-BR' ? `há ${hours}h` : `${hours}h ago`;
 }
 
+export function formatShortTime(timestamp: number, locale: Locale = 'en'): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+  const now = new Date();
+  const sameDay =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+  if (sameDay) {
+    return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date);
+  }
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / 86_400_000);
+  if (diffDays < 7) {
+    return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date);
+  }
+  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit' }).format(date);
+}
+
+export function formatMessageTime(timestamp: number, locale: Locale = 'en'): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date);
+}
+
+export function sameDay(a: number, b: number): boolean {
+  const first = new Date(a);
+  const second = new Date(b);
+  return (
+    first.getDate() === second.getDate() &&
+    first.getMonth() === second.getMonth() &&
+    first.getFullYear() === second.getFullYear()
+  );
+}
+
+export function formatDayLabel(timestamp: number, locale: Locale = 'en'): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+  const now = new Date();
+  if (sameDay(timestamp, now.getTime())) return locale === 'pt-BR' ? 'Hoje' : 'Today';
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  if (sameDay(timestamp, yesterday.getTime())) {
+    return locale === 'pt-BR' ? 'Ontem' : 'Yesterday';
+  }
+  return new Intl.DateTimeFormat(locale, {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+  }).format(date);
+}
+
+export function initials(name: string): string {
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+  if (!parts.length) return '?';
+  return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
+}
+
 export function truncate(value: string, max: number): string {
   const clean = value.trim().replace(/\s+/g, ' ');
   if (clean.length <= max) return clean;

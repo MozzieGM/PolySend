@@ -7,6 +7,7 @@ import { UsageBar } from './components/UsageBar';
 import { MobileTabs, type MobileTab } from './components/MobileTabs';
 import { DeliveryModal } from './components/DeliveryModal';
 import { KeyModal } from './components/KeyModal';
+import { WhatsAppStudio } from './components/whatsapp/WhatsAppStudio';
 import { Toast, type ToastData, type ToastTone } from './components/Toast';
 import {
   ApiError,
@@ -34,12 +35,14 @@ import type {
   SessionStats,
   StreamMode,
   StreamUsage,
+  Workspace,
 } from './types';
 
 const KEY_STORAGE = 'oc_live_api_key';
 const RESEND_KEY_STORAGE = 'polysend_resend_key';
 const MODEL_STORAGE = 'oc_live_model';
 const PLAN_STORAGE = 'oc_live_plan';
+const WORKSPACE_STORAGE = 'polysend_workspace';
 
 const EMPTY_DRAFT: Draft = {
   to: '',
@@ -126,6 +129,11 @@ export default function App() {
   const [plan, setPlan] = useState<Plan>(() => {
     const stored = readStorage('local', PLAN_STORAGE);
     return stored === 'go-plus' || stored === 'go-teams' ? stored : 'go';
+  });
+  const [workspace, setWorkspace] = useState<Workspace>(() => {
+    const requested = new URLSearchParams(window.location.search).get('workspace');
+    if (requested === 'whatsapp' || requested === 'email') return requested;
+    return readStorage('local', WORKSPACE_STORAGE) === 'whatsapp' ? 'whatsapp' : 'email';
   });
   const [briefing, setBriefing] = useState<Briefing>(() => getDefaultBriefing(locale));
   const [briefingDirty, setBriefingDirty] = useState(false);
@@ -796,6 +804,18 @@ export default function App() {
     setPlan(nextPlan);
   };
 
+  const handleWorkspaceChange = (next: Workspace) => {
+    setWorkspace(next);
+    writeStorage('local', WORKSPACE_STORAGE, next);
+    setModelsDrawerOpen(false);
+    setDeliveryOpen(false);
+  };
+
+  const handleWorkspaceModelChange = (id: string) => {
+    setSelectedId(id);
+    writeStorage('local', MODEL_STORAGE, id);
+  };
+
   const selectedName = selectedModel?.name ?? null;
   const canGenerate = Boolean(selectedModel) && Boolean(briefing.topic.trim()) && !isStreaming;
 
@@ -807,11 +827,25 @@ export default function App() {
         modelCount={models.length}
         monthlyPercent={monthlyPercent}
         plan={plan}
+        workspace={workspace}
+        onWorkspaceChange={handleWorkspaceChange}
         onOpenKey={() => setKeyModalOpen(true)}
         onOpenModels={handleOpenModels}
         onOpenDelivery={handleOpenDelivery}
         deliveryConfigured={Boolean(resendKey) || Boolean(health?.resendKeyConfigured)}
       />
+
+      {workspace === 'whatsapp' ? (
+        <WhatsAppStudio
+          storedKey={storedKey}
+          hasKey={hasKey}
+          models={models}
+          selectedModel={selectedModel}
+          onModelChange={handleWorkspaceModelChange}
+          onOpenKey={() => setKeyModalOpen(true)}
+        />
+      ) : (
+        <>
 
       <main className={`layout ${isMobile ? 'is-mobile' : ''}`}>
         <div
@@ -907,6 +941,8 @@ export default function App() {
           role="presentation"
           onClick={() => setModelsDrawerOpen(false)}
         />
+      )}
+        </>
       )}
 
       <KeyModal

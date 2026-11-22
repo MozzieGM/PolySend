@@ -4,11 +4,13 @@ import {
   KeyRound,
   Languages,
   LayoutGrid,
+  Mail,
   MailCheck,
+  MessageCircle,
   Radio,
   Send,
 } from 'lucide-react';
-import type { ConnectionState, KeySource, Plan } from '../types';
+import type { ConnectionState, KeySource, Plan, Workspace } from '../types';
 import { formatPercent } from '../lib/format';
 import { useI18n, type MessageKey } from '../lib/i18n';
 import { PLAN_LABELS } from '../lib/models';
@@ -19,7 +21,9 @@ interface HeaderProps {
   modelCount: number;
   monthlyPercent: number | null;
   plan: Plan;
+  workspace: Workspace;
   deliveryConfigured: boolean;
+  onWorkspaceChange: (workspace: Workspace) => void;
   onOpenKey: () => void;
   onOpenModels: () => void;
   onOpenDelivery: () => void;
@@ -44,7 +48,9 @@ export function Header({
   modelCount,
   monthlyPercent,
   plan,
+  workspace,
   deliveryConfigured,
+  onWorkspaceChange,
   onOpenKey,
   onOpenModels,
   onOpenDelivery,
@@ -69,11 +75,38 @@ export function Header({
                 live
               </span>
             </div>
-            <span className="brand-sub">email studio · go api</span>
+            <span className="brand-sub">
+              {workspace === 'whatsapp' ? 'whatsapp studio · go api' : 'email studio · go api'}
+            </span>
           </div>
         </div>
 
         <div className="topbar-actions">
+          <div className="workspace-switch" role="tablist" aria-label={t('workspace.switchAria')}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={workspace === 'email'}
+              className={workspace === 'email' ? 'is-active' : ''}
+              onClick={() => onWorkspaceChange('email')}
+              title={t('workspace.email')}
+            >
+              <Mail size={13} strokeWidth={2.2} />
+              <span>{t('workspace.email')}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={workspace === 'whatsapp'}
+              className={workspace === 'whatsapp' ? 'is-active' : ''}
+              onClick={() => onWorkspaceChange('whatsapp')}
+              title={t('workspace.whatsapp')}
+            >
+              <MessageCircle size={13} strokeWidth={2.2} />
+              <span>{t('workspace.whatsapp')}</span>
+            </button>
+          </div>
+
           <button
             type="button"
             className={`status-pill status-${connection}`}
@@ -97,11 +130,13 @@ export function Header({
             </span>
           </div>
 
-          <button type="button" className="btn btn-ghost models-toggle" onClick={onOpenModels}>
-            <LayoutGrid size={15} strokeWidth={2} />
-            <span>{t('header.models')}</span>
-            <span className="btn-count">{modelCount}</span>
-          </button>
+          {workspace === 'email' && (
+            <button type="button" className="btn btn-ghost models-toggle" onClick={onOpenModels}>
+              <LayoutGrid size={15} strokeWidth={2} />
+              <span>{t('header.models')}</span>
+              <span className="btn-count">{modelCount}</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -113,20 +148,22 @@ export function Header({
             <span className="key-btn-label">{t('header.configure')}</span>
           </button>
 
-          <button
-            type="button"
-            className="btn btn-delivery"
-            onClick={onOpenDelivery}
-            title={t('header.deliveryTitle')}
-            aria-label={t('header.deliveryAria')}
-          >
-            <MailCheck size={15} strokeWidth={2} />
-            <span className="delivery-btn-label">{t('header.delivery')}</span>
-            <span
-              className={`delivery-status-dot ${deliveryConfigured ? 'is-on' : ''}`}
-              aria-hidden="true"
-            />
-          </button>
+          {workspace === 'email' && (
+            <button
+              type="button"
+              className="btn btn-delivery"
+              onClick={onOpenDelivery}
+              title={t('header.deliveryTitle')}
+              aria-label={t('header.deliveryAria')}
+            >
+              <MailCheck size={15} strokeWidth={2} />
+              <span className="delivery-btn-label">{t('header.delivery')}</span>
+              <span
+                className={`delivery-status-dot ${deliveryConfigured ? 'is-on' : ''}`}
+                aria-hidden="true"
+              />
+            </button>
+          )}
 
           <button
             type="button"

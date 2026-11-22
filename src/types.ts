@@ -66,6 +66,8 @@ export interface Health {
     fromEmail?: string | null;
     replyTo?: string | null;
   };
+  whatsappState?: string;
+  whatsappMock?: boolean;
   apiBase: string;
   fetchedAt: string;
 }
@@ -184,4 +186,68 @@ export interface StreamHandlers {
   onUsage?: (usage: StreamUsage) => void;
   onDone?: (payload: { elapsedMs?: number; model?: string; truncated?: boolean }) => void;
   onError?: (error: { code: string; message: string }) => void;
+}
+
+export type Workspace = 'email' | 'whatsapp';
+export type WhatsAppState =
+  | 'disconnected'
+  | 'connecting'
+  | 'qr'
+  | 'connected'
+  | 'logged_out';
+
+export interface WhatsAppMe {
+  id: string;
+  name: string;
+  number: string | null;
+}
+
+export interface WhatsAppStatus {
+  state: WhatsAppState;
+  qr: string | null;
+  me: WhatsAppMe | null;
+  lastError: string | null;
+  mock: boolean;
+  chatCount?: number;
+}
+
+export interface WhatsAppChat {
+  id: string;
+  name: string;
+  isGroup: boolean;
+  lastMessage: string;
+  lastMessageAt: number | null;
+  lastMessageFromMe: boolean;
+  unread: number;
+  color: string;
+}
+
+export interface WhatsAppMessage {
+  id: string;
+  chatId: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  timestamp: number;
+  fromMe: boolean;
+  type: 'text' | 'media';
+}
+
+export interface WhatsAppMessageEvent {
+  message: WhatsAppMessage;
+  chat: WhatsAppChat | null;
+}
+
+export interface WhatsAppChatsEvent {
+  chats: WhatsAppChat[];
+}
+
+export interface WhatsAppAIPayload {
+  chatJid: string;
+  model: string;
+  instruction?: string;
+  tone: Tone;
+  language: Language;
+  length: EmailLength;
+  reasoningEffort?: string;
 }

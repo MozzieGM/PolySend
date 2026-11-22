@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "PolySend — live email studio powered by the OpenCode Go API",
+  "description": "PolySend — live email and WhatsApp studio powered by the OpenCode Go API",
   "engines": {
     "node": ">=20"
   },
@@ -16,9 +16,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.22",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "lucide-react": "^0.468.0",
+    "pino": "^10.4.0",
+    "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

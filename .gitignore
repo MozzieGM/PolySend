@@ -3,5 +3,9 @@ dist/
 .env
 .env.local
 .env.*.local
+.wa-auth/
+.wa-store.json
+.wa-store.mock.json
+.wa-store.json.tmp
 *.log
 .DS_Store
