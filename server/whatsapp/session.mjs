@@ -928,7 +928,13 @@ export async function getProfile(jid) {
       const entry = (statuses ?? []).find(
         (item) => item?.id && jidNormalizedUser(item.id) === jidNormalizedUser(resolved),
       );
-      about = entry?.status ?? null;
+      const rawAbout = entry?.status;
+      about =
+        typeof rawAbout === 'string'
+          ? rawAbout
+          : rawAbout && typeof rawAbout === 'object' && 'status' in rawAbout
+            ? rawAbout.status ?? null
+            : null;
     } catch {
       /* status is optional */
     }
@@ -999,15 +1005,16 @@ export async function getAvatar(jid) {
       signal: AbortSignal.timeout(15_000),
     });
   } catch (error) {
-    throw new WhatsAppError(
-      502,
-      'whatsapp_avatar_failed',
-      `Could not download this avatar: ${error?.message || 'unknown error'}`,
-    );
+    console.warn('  [whatsapp] avatar download failed:', error?.message || error);
+    return { redirectUrl: url };
   }
   if (!response.ok) {
-    avatarMisses.set(resolved, Date.now());
-    throw new WhatsAppError(404, 'whatsapp_avatar_unavailable', 'Avatar unavailable.');
+    console.warn(`  [whatsapp] avatar CDN returned ${response.status}`);
+    if (response.status === 404 || response.status === 410) {
+      avatarMisses.set(resolved, Date.now());
+      throw new WhatsAppError(404, 'whatsapp_avatar_unavailable', 'Avatar unavailable.');
+    }
+    return { redirectUrl: url };
   }
 
   const buffer = Buffer.from(await response.arrayBuffer());
@@ -1017,7 +1024,7 @@ export async function getAvatar(jid) {
     const oldest = avatarCache.keys().next().value;
     if (oldest) avatarCache.delete(oldest);
   }
-  return { buffer, mimetype };
+  return { buffer, mimetype, redirectUrl: null };
 }
 
 export async function getMedia(id) {

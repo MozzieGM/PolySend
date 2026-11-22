@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { formatDuration } from '../../lib/format';
 import { useI18n } from '../../lib/i18n';
+import { whatsAppAvatarUrl } from '../../lib/whatsapp';
 import type {
   EmailLength,
   Language,
@@ -25,6 +26,7 @@ const LANGUAGES: Language[] = ['pt-BR', 'en', 'es'];
 
 interface WhatsAppCopilotProps {
   chat: WhatsAppChat | null;
+  mock: boolean;
   hasKey: boolean;
   models: Model[];
   modelId: string;
@@ -51,6 +53,7 @@ interface WhatsAppCopilotProps {
 
 export function WhatsAppCopilot({
   chat,
+  mock,
   hasKey,
   models,
   modelId,
@@ -114,6 +117,7 @@ export function WhatsAppCopilot({
                 color={chat.color}
                 isGroup={chat.isGroup}
                 size={32}
+                imageUrl={mock ? null : whatsAppAvatarUrl(chat.id)}
               />
               <div>
                 <span>{t('whatsapp.aiContext', { name: chat.name })}</span>

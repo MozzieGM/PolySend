@@ -1118,6 +1118,10 @@ app.get(
       res.status(status === 404 ? 404 : 502).end();
       return;
     }
+    if (avatar.redirectUrl) {
+      res.redirect(302, avatar.redirectUrl);
+      return;
+    }
     res.setHeader('Content-Type', avatar.mimetype);
     res.setHeader('Content-Length', avatar.buffer.length);
     res.setHeader('Cache-Control', 'private, max-age=600');

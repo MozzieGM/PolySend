@@ -523,6 +523,7 @@ export function WhatsAppStudio({
 
         <WhatsAppCopilot
           chat={activeChat}
+          mock={Boolean(status.mock)}
           hasKey={hasKey}
           models={models}
           modelId={selectedModel?.id ?? ''}
