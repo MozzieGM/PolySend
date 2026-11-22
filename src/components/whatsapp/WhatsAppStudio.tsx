@@ -29,6 +29,7 @@ import { WhatsAppChatList } from './WhatsAppChatList';
 import { WhatsAppConnect } from './WhatsAppConnect';
 import { WhatsAppConversation } from './WhatsAppConversation';
 import { WhatsAppCopilot } from './WhatsAppCopilot';
+import { WhatsAppProfileModal } from './WhatsAppProfileModal';
 
 interface WhatsAppStudioProps {
   storedKey: string;
@@ -89,6 +90,7 @@ export function WhatsAppStudio({
   const aiAbort = useRef<AbortController | null>(null);
   const aiLanguageTouched = useRef(false);
   const [mobilePane, setMobilePane] = useState<'list' | 'chat' | 'copilot'>('list');
+  const [profileJid, setProfileJid] = useState<string | null>(null);
 
   const activeChat = useMemo(
     () => chats.find((chat) => chat.id === activeJid) ?? null,
@@ -452,6 +454,7 @@ export function WhatsAppStudio({
 
   if (status && showStudio) {
     return (
+      <>
       <main
         className={`wa-shell ${mobilePane === 'chat' ? 'wa-pane-chat' : ''} ${
           mobilePane === 'copilot' ? 'wa-pane-copilot' : ''
@@ -471,6 +474,7 @@ export function WhatsAppStudio({
           onRefresh={() => void refreshChats()}
           onReimport={() => void handleReimport()}
           onClearCache={() => void handleClearCache()}
+          onOpenProfile={setProfileJid}
         />
 
         {activeChat ? (
@@ -482,10 +486,12 @@ export function WhatsAppStudio({
             sending={sending}
             aiStreaming={aiStreaming}
             loading={messagesLoading}
+            mock={Boolean(status.mock)}
             error={sendError ?? messagesError}
             onDraftChange={setDraft}
             onSend={() => void handleSend()}
             onOpenAi={handleOpenAi}
+            onOpenProfile={() => setProfileJid(activeChat.id)}
             onBack={() => setMobilePane('list')}
           />
         ) : (
@@ -541,6 +547,11 @@ export function WhatsAppStudio({
           onClose={() => setMobilePane('chat')}
         />
       </main>
+
+      {profileJid && (
+        <WhatsAppProfileModal jid={profileJid} onClose={() => setProfileJid(null)} />
+      )}
+      </>
     );
   }
 

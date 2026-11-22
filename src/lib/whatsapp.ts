@@ -5,9 +5,14 @@ import type {
   WhatsAppChat,
   WhatsAppMessage,
   WhatsAppMessageEvent,
+  WhatsAppProfile,
   WhatsAppStatus,
   StreamUsage,
 } from '../types';
+
+export function whatsAppAvatarUrl(jid: string): string {
+  return `/api/whatsapp/avatar/${encodeURIComponent(jid)}`;
+}
 
 function openCodeHeaders(key?: string): HeadersInit {
   return {
@@ -56,6 +61,13 @@ export async function clearWhatsAppCache(): Promise<{
       body: '{}',
     }),
   );
+}
+
+export async function fetchWhatsAppProfile(jid: string): Promise<WhatsAppProfile> {
+  const body = await json<{ profile: WhatsAppProfile }>(
+    await fetch(`/api/whatsapp/profile/${encodeURIComponent(jid)}`),
+  );
+  return body.profile;
 }
 
 export async function fetchWhatsAppChats(query = ''): Promise<WhatsAppChat[]> {

@@ -18,6 +18,7 @@ import {
   sameDay,
 } from '../../lib/format';
 import { useI18n } from '../../lib/i18n';
+import { whatsAppAvatarUrl } from '../../lib/whatsapp';
 import type {
   WhatsAppChat,
   WhatsAppMe,
@@ -127,10 +128,12 @@ interface WhatsAppConversationProps {
   sending: boolean;
   aiStreaming: boolean;
   loading: boolean;
+  mock: boolean;
   error: string | null;
   onDraftChange: (text: string) => void;
   onSend: () => void;
   onOpenAi: () => void;
+  onOpenProfile: () => void;
   onBack: () => void;
 }
 
@@ -142,10 +145,12 @@ export function WhatsAppConversation({
   sending,
   aiStreaming,
   loading,
+  mock,
   error,
   onDraftChange,
   onSend,
   onOpenAi,
+  onOpenProfile,
   onBack,
 }: WhatsAppConversationProps) {
   const { locale, t } = useI18n();
@@ -195,24 +200,32 @@ export function WhatsAppConversation({
         >
           <ArrowLeft size={16} strokeWidth={2.2} />
         </button>
-        <WhatsAppAvatar
-          name={chat.name}
-          color={chat.color}
-          isGroup={chat.isGroup}
-          size={38}
-          online
-        />
-        <div className="wa-conv-title">
-          <strong>{chat.name}</strong>
-          <span>
-            <i className={`wa-conv-dot ${aiStreaming ? 'is-ai' : ''}`} />
-            {aiStreaming
-              ? t('whatsapp.aiWriting')
-              : chat.isGroup
-                ? t('whatsapp.group')
-                : 'WhatsApp'}
-          </span>
-        </div>
+        <button
+          type="button"
+          className="wa-conv-profile"
+          onClick={onOpenProfile}
+          title={t('whatsapp.profileAria')}
+        >
+          <WhatsAppAvatar
+            name={chat.name}
+            color={chat.color}
+            isGroup={chat.isGroup}
+            size={38}
+            online
+            imageUrl={mock ? null : whatsAppAvatarUrl(chat.id)}
+          />
+          <div className="wa-conv-title">
+            <strong>{chat.name}</strong>
+            <span>
+              <i className={`wa-conv-dot ${aiStreaming ? 'is-ai' : ''}`} />
+              {aiStreaming
+                ? t('whatsapp.aiWriting')
+                : chat.isGroup
+                  ? t('whatsapp.group')
+                  : 'WhatsApp'}
+            </span>
+          </div>
+        </button>
         <button
           type="button"
           className="btn btn-ghost wa-conv-ai"

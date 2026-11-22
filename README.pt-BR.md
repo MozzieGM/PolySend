@@ -195,6 +195,8 @@ segundo adaptador entra sem alterar o estúdio.
 
 ![Preview de mídia no WhatsApp](img/whatsapp-media.png)
 
+![Perfil de contato no WhatsApp](img/whatsapp-profile.png)
+
 Alterne para **WhatsApp** no header. O workspace tem três painéis: conversas à esquerda, a thread
 ao vivo no centro e o copiloto de IA à direita.
 
@@ -225,11 +227,16 @@ para experimentar.
   grupos apagados saem do cache quando o WhatsApp avisa. Ao reconectar, o servidor também confere
   em quais grupos você ainda participa e remove os demais; tombstones impedem que uma nova
   sincronização de histórico os traga de volta.
-- **Limpar conversas em cache** (ícone de lixeira) apaga o cache local e reconecta para reconstruir
-  a lista atual do WhatsApp sem desvincular o dispositivo.
+- **Limpar conversas em cache** (ícone de lixeira) apaga o cache local e reconecta sem desvincular
+  o dispositivo. Isso também remove o histórico importado; use **Importar conversas antigas**
+  (ícone de histórico) para escanear o QR novamente e reimportar. Uma cópia do store anterior fica
+  em `.wa-store.backup.json`.
 - **Mídia é exibida inline**: fotos e stickers abrem em lightbox, vídeos e áudios usam os players
   nativos, e documentos baixam com o nome original. A mídia é baixada sob demanda e fica em cache
   na memória durante a sessão do servidor.
+- **Fotos de perfil e dados**: os avatares são buscados pelo servidor local e ficam em cache.
+  Clique no cabeçalho da conversa (ou na sua conta na barra lateral) para ver número / ID do
+  WhatsApp, recado, JID e, em grupos, descrição, número de participantes, criador e data.
 - Enviar anexos pelo composer, reações e chamadas ainda não estão implementados.
 
 ### 3. Escrever com o copiloto de IA
@@ -261,6 +268,8 @@ OpenCode Go de verdade. Remova `WHATSAPP_MOCK` (ou use `0`) para usar o WhatsApp
 | POST   | `/api/whatsapp/logout` | desvincula o dispositivo e limpa `.wa-auth` |
 | POST   | `/api/whatsapp/cache/clear` | limpa o cache de conversas e reconecta para reconstruir a lista |
 | GET    | `/api/whatsapp/chats` | lista de conversas, mais recentes primeiro |
+| GET    | `/api/whatsapp/profile/:jid` | dados do contato/grupo, recado e participantes (`me` para você) |
+| GET    | `/api/whatsapp/avatar/:jid` | busca e cacheia fotos de perfil (`me` para você) |
 | GET    | `/api/whatsapp/chats/:jid/messages` | mensagens de uma conversa e marca como lida |
 | POST   | `/api/whatsapp/chats/:jid/messages` | envia uma mensagem de texto |
 | POST   | `/api/whatsapp/chats/:jid/read` | zera o contador de não lidas |
@@ -330,6 +339,8 @@ server/
 | POST   | `/api/whatsapp/logout` | desvincula o dispositivo e limpa `.wa-auth` |
 | POST   | `/api/whatsapp/cache/clear` | limpa o cache de conversas e reconecta para reconstruir a lista |
 | GET    | `/api/whatsapp/chats` | lista de conversas, mais recentes primeiro |
+| GET    | `/api/whatsapp/profile/:jid` | dados do contato/grupo, recado e participantes (`me` para você) |
+| GET    | `/api/whatsapp/avatar/:jid` | busca e cacheia fotos de perfil (`me` para você) |
 | GET    | `/api/whatsapp/chats/:jid/messages` | mensagens de uma conversa |
 | POST   | `/api/whatsapp/chats/:jid/messages` | envia uma mensagem de texto |
 | GET    | `/api/whatsapp/media/:id` | baixa e serve foto, vídeo, áudio ou documento |

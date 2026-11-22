@@ -6,6 +6,7 @@ dist/
 .wa-auth/
 .wa-store.json
 .wa-store.mock.json
+.wa-store.backup.json
 .wa-store.json.tmp
 *.log
 .DS_Store

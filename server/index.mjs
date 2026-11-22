@@ -40,7 +40,9 @@ import {
   bootstrapWhatsApp,
   clearWhatsAppCache,
   connect as connectWhatsApp,
+  getAvatar as getWhatsAppAvatar,
   getMedia as getWhatsAppMedia,
+  getProfile as getWhatsAppProfile,
   getStatus as getWhatsAppStatus,
   isMockMode as isWhatsAppMock,
   logout as logoutWhatsApp,
@@ -1090,6 +1092,38 @@ app.post('/api/whatsapp/chats/:jid/read', (req, res) => {
     throw whatsappError(error);
   }
 });
+
+app.get(
+  '/api/whatsapp/profile/:jid',
+  asyncRoute(async (req, res) => {
+    const jid = trim(req.params.jid, 140);
+    try {
+      const profile = await getWhatsAppProfile(jid);
+      res.json({ profile });
+    } catch (error) {
+      throw whatsappError(error);
+    }
+  }),
+);
+
+app.get(
+  '/api/whatsapp/avatar/:jid',
+  asyncRoute(async (req, res) => {
+    const jid = trim(req.params.jid, 140);
+    let avatar;
+    try {
+      avatar = await getWhatsAppAvatar(jid);
+    } catch (error) {
+      const status = error instanceof WhatsAppError ? error.status : 502;
+      res.status(status === 404 ? 404 : 502).end();
+      return;
+    }
+    res.setHeader('Content-Type', avatar.mimetype);
+    res.setHeader('Content-Length', avatar.buffer.length);
+    res.setHeader('Cache-Control', 'private, max-age=600');
+    res.send(avatar.buffer);
+  }),
+);
 
 app.get(
   '/api/whatsapp/media/:id',

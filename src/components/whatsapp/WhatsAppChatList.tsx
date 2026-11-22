@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import {
   AlertCircle,
+  ChevronRight,
   History,
   Loader2,
   LogOut,
@@ -9,6 +10,7 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
+import { whatsAppAvatarUrl } from '../../lib/whatsapp';
 import { formatShortTime, truncate } from '../../lib/format';
 import { useI18n } from '../../lib/i18n';
 import type { WhatsAppChat, WhatsAppMe, WhatsAppStatus } from '../../types';
@@ -28,6 +30,7 @@ interface WhatsAppChatListProps {
   onRefresh: () => void;
   onReimport: () => void;
   onClearCache: () => void;
+  onOpenProfile: (jid: string) => void;
 }
 
 export function WhatsAppChatList({
@@ -44,6 +47,7 @@ export function WhatsAppChatList({
   onRefresh,
   onReimport,
   onClearCache,
+  onOpenProfile,
 }: WhatsAppChatListProps) {
   const { locale, t } = useI18n();
   const syncing = Boolean(status?.history?.syncing);
@@ -78,6 +82,15 @@ export function WhatsAppChatList({
         </div>
 
         <div className="wa-sidebar-actions">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={onReimport}
+            title={t('whatsapp.importHistory')}
+            aria-label={t('whatsapp.importHistory')}
+          >
+            <History size={13} />
+          </button>
           <button
             type="button"
             className="icon-btn"
@@ -169,6 +182,7 @@ export function WhatsAppChatList({
                     color={chat.color}
                     isGroup={chat.isGroup}
                     size={42}
+                    imageUrl={status?.mock ? null : whatsAppAvatarUrl(chat.id)}
                   />
                   <div className="wa-chat-copy">
                     <div className="wa-chat-line">
@@ -218,8 +232,24 @@ export function WhatsAppChatList({
         </div>
       )}
 
-      <div className="wa-sidebar-foot">
-        <span className={`wa-foot-dot ${status?.state === 'connected' ? 'is-on' : ''}`} />
+      <button
+        type="button"
+        className="wa-sidebar-foot wa-account"
+        onClick={() => me && onOpenProfile('me')}
+        disabled={!me}
+        title={t('whatsapp.myProfile')}
+      >
+        {me ? (
+          <WhatsAppAvatar
+            name={me.name}
+            color="#58e39a"
+            size={30}
+            online={status?.state === 'connected'}
+            imageUrl={status?.mock ? null : whatsAppAvatarUrl('me')}
+          />
+        ) : (
+          <span className={`wa-foot-dot ${status?.state === 'connected' ? 'is-on' : ''}`} />
+        )}
         <div>
           <span>
             {status?.state === 'connected'
@@ -230,13 +260,17 @@ export function WhatsAppChatList({
           </span>
           {me && (
             <small>
-              {t('whatsapp.connectedAs', { name: me.name })}
+              {me.name}
               {me.number ? ` · ${me.number}` : ''}
             </small>
           )}
         </div>
-        {loading && chats.length > 0 && <Loader2 size={12} className="is-spinning" />}
-      </div>
+        {loading && chats.length > 0 ? (
+          <Loader2 size={12} className="is-spinning" />
+        ) : (
+          <ChevronRight size={13} />
+        )}
+      </button>
     </aside>
   );
 }

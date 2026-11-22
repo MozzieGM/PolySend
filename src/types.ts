@@ -256,6 +256,22 @@ export interface WhatsAppMessageEvent {
   chat: WhatsAppChat | null;
 }
 
+export interface WhatsAppProfile {
+  jid: string;
+  name: string;
+  number: string | null;
+  isLid: boolean;
+  isGroup: boolean;
+  about: string | null;
+  description: string | null;
+  participants: number | null;
+  owner: string | null;
+  createdAt: number | null;
+  avatarUrl: string | null;
+  hasAvatar: boolean;
+  isSelf: boolean;
+}
+
 export interface WhatsAppChatsEvent {
   chats: WhatsAppChat[];
 }

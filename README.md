@@ -193,6 +193,8 @@ without changing the studio itself.
 
 ![WhatsApp media preview](img/whatsapp-media.png)
 
+![WhatsApp contact profile](img/whatsapp-profile.png)
+
 Switch to **WhatsApp** in the header. The workspace has three panes: conversations on the left,
 the live thread in the center, and an AI copilot on the right.
 
@@ -223,11 +225,15 @@ for experiments.
   are removed from the cache when WhatsApp reports the deletion. On reconnect, the server also
   checks which groups you still participate in and prunes the rest. Tombstones stop a later
   history sync from bringing them back.
-- **Clear cached chats** (trash icon) wipes the local cache and reconnects to rebuild the current
-  list from WhatsApp without unlinking the device.
+- **Clear cached chats** (trash icon) wipes the local cache and reconnects without unlinking the
+  device. This also removes imported history; use **Import past chats** (history icon) to scan the
+  QR again and re-import it. A copy of the previous store is kept in `.wa-store.backup.json`.
 - **Media is rendered inline**: photos and stickers open in a lightbox, videos and audio use the
   native players, and documents download with their filename. Media is fetched on demand and
   cached in memory for the current server session.
+- **Profile pictures and details**: avatars are fetched through the local server and cached.
+  Click the chat header (or your account in the sidebar) to see the phone number / WhatsApp ID,
+  About text, JID, and for groups the description, participant count, owner, and creation date.
 - Sending attachments from the composer, reactions, and calls are not implemented yet.
 
 ### 3. Write with the AI copilot
@@ -260,6 +266,8 @@ for real. Unset `WHATSAPP_MOCK` (or set it to `0`) to use the real WhatsApp conn
 | POST   | `/api/whatsapp/logout` | unlinks the device and clears `.wa-auth` |
 | POST   | `/api/whatsapp/cache/clear` | clears cached chats and reconnects to rebuild the list |
 | GET    | `/api/whatsapp/chats` | chat list, newest first |
+| GET    | `/api/whatsapp/profile/:jid` | contact/group details, About, participants (`me` for self) |
+| GET    | `/api/whatsapp/avatar/:jid` | proxies and caches profile pictures (`me` for self) |
 | GET    | `/api/whatsapp/chats/:jid/messages` | messages for one chat and marks it read |
 | POST   | `/api/whatsapp/chats/:jid/messages` | sends a text message |
 | POST   | `/api/whatsapp/chats/:jid/read` | clears the unread counter |
@@ -328,6 +336,8 @@ server/
 | POST   | `/api/whatsapp/logout` | unlinks the device and clears `.wa-auth` |
 | POST   | `/api/whatsapp/cache/clear` | clears cached chats and reconnects to rebuild the list |
 | GET    | `/api/whatsapp/chats` | chat list, newest first |
+| GET    | `/api/whatsapp/profile/:jid` | contact/group details, About, participants (`me` for self) |
+| GET    | `/api/whatsapp/avatar/:jid` | proxies and caches profile pictures (`me` for self) |
 | GET    | `/api/whatsapp/chats/:jid/messages` | messages for one chat |
 | POST   | `/api/whatsapp/chats/:jid/messages` | sends a text message |
 | GET    | `/api/whatsapp/media/:id` | downloads and serves a photo, video, audio, or document |

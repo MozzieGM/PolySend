@@ -231,6 +231,13 @@ export function deleteChats(jids) {
 }
 
 export function clearChatCache() {
+  if (storePath) {
+    try {
+      fs.copyFileSync(storePath, storePath.replace(/\.json$/, '.backup.json'));
+    } catch {
+      /* best effort */
+    }
+  }
   chats.clear();
   messages.clear();
   mediaRaw.clear();

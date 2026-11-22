@@ -68,6 +68,13 @@ const lastIncomingKey = new Map();
 const mediaMessages = new Map();
 const MAX_CACHED_MEDIA = 800;
 const MAX_MEDIA_BYTES = 40 * 1024 * 1024;
+const avatarCache = new Map();
+const avatarMisses = new Map();
+const profileCache = new Map();
+const AVATAR_TTL_MS = 10 * 60_000;
+const AVATAR_MISS_TTL_MS = 5 * 60_000;
+const PROFILE_TTL_MS = 2 * 60_000;
+const MAX_AVATAR_CACHE = 300;
 
 const MOCK_ME = {
   id: 'demo@localhost',
@@ -138,6 +145,19 @@ function timestampOf(value) {
   }
   const parsed = Number(value);
   return Number.isFinite(parsed) ? (parsed < 1e12 ? parsed * 1000 : parsed) : Date.now();
+}
+
+function withTimeout(promise, ms, message = 'Request timed out.') {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), ms);
+      timer.unref?.();
+    }),
+  ]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
 function numberValue(value) {
@@ -684,6 +704,9 @@ export async function logout() {
   resetHistory();
   mediaMessages.clear();
   clearMediaRaw();
+  avatarCache.clear();
+  avatarMisses.clear();
+  profileCache.clear();
   lastError = null;
   await fs.rm(AUTH_DIR, { recursive: true, force: true }).catch(() => {});
   emitStatus();
@@ -818,6 +841,183 @@ export async function clearWhatsAppCache() {
   }
   emitStatus();
   return getStatus();
+}
+
+function resolveProfileJid(jid) {
+  if (jid === 'me') {
+    if (!me?.id) {
+      throw new WhatsAppError(409, 'whatsapp_not_connected', 'WhatsApp is not connected.');
+    }
+    return me.id;
+  }
+  if (
+    !jid ||
+    shouldSkipJid(jid) ||
+    !/^[A-Za-z0-9._:-]+@(s\.whatsapp\.net|g\.us|lid)$/.test(jid)
+  ) {
+    throw new WhatsAppError(400, 'whatsapp_invalid_chat', 'Invalid WhatsApp contact.');
+  }
+  return jid;
+}
+
+function displayNumber(jid) {
+  const user = String(jid).split('@')[0].split(':')[0];
+  if (jid.endsWith('@s.whatsapp.net') && /^\d{8,15}$/.test(user)) return `+${user}`;
+  return null;
+}
+
+export async function getProfile(jid) {
+  const resolved = resolveProfileJid(jid);
+  const cached = profileCache.get(resolved);
+  if (cached && Date.now() - cached.at < PROFILE_TTL_MS) {
+    return cached.data;
+  }
+
+  if (MOCK) {
+    const isGroup = resolved.endsWith('@g.us');
+    const chat = getChat(resolved);
+    const own = me?.id === resolved;
+    const data = {
+      jid: jid === 'me' ? 'me' : resolved,
+      name: own ? me?.name || 'PolySend Demo' : chat?.name || formatPhone(resolved),
+      number: isGroup ? null : own ? me?.number || null : displayNumber(resolved),
+      isLid: false,
+      isGroup,
+      about: isGroup ? null : 'Disponível para conversar 😊',
+      description: isGroup ? 'Grupo de demonstração do PolySend.' : null,
+      participants: isGroup ? 12 : null,
+      owner: isGroup ? 'demo@localhost' : null,
+      createdAt: null,
+      avatarUrl: null,
+      hasAvatar: false,
+      isSelf: Boolean(own) || jid === 'me',
+    };
+    profileCache.set(resolved, { at: Date.now(), data });
+    return data;
+  }
+
+  if (!sock || state !== 'connected') {
+    throw new WhatsAppError(409, 'whatsapp_not_connected', 'WhatsApp is not connected.');
+  }
+
+  const isGroup = resolved.endsWith('@g.us');
+  const own = me?.id === resolved;
+  const chat = getChat(resolved);
+  let name = own ? me?.name : chat?.name || contactNameFor(resolved) || formatPhone(resolved);
+  let about = null;
+  let description = null;
+  let participants = null;
+  let owner = null;
+  let createdAt = null;
+
+  if (isGroup) {
+    try {
+      const metadata = await withTimeout(sock.groupMetadata(resolved), 8_000);
+      name = metadata?.subject || name;
+      description = metadata?.desc || null;
+      participants = Array.isArray(metadata?.participants) ? metadata.participants.length : null;
+      owner = metadata?.owner || null;
+      const creation = numberValue(metadata?.creation);
+      createdAt = creation ? creation * 1000 : null;
+    } catch {
+      /* keep cached name */
+    }
+  } else {
+    try {
+      const statuses = await withTimeout(sock.fetchStatus(resolved), 6_000);
+      const entry = (statuses ?? []).find(
+        (item) => item?.id && jidNormalizedUser(item.id) === jidNormalizedUser(resolved),
+      );
+      about = entry?.status ?? null;
+    } catch {
+      /* status is optional */
+    }
+  }
+
+  let avatarUrl = null;
+  try {
+    const url = await withTimeout(
+      sock.profilePictureUrl(resolved, 'image', 8_000),
+      9_000,
+    );
+    if (url) avatarUrl = `/api/whatsapp/avatar/${encodeURIComponent(jid === 'me' ? 'me' : resolved)}`;
+  } catch {
+    avatarUrl = null;
+  }
+
+  const data = {
+    jid: jid === 'me' ? 'me' : resolved,
+    name: name || formatPhone(resolved),
+    number: isGroup ? null : own ? me?.number || displayNumber(resolved) : displayNumber(resolved),
+    isLid: !isGroup && resolved.endsWith('@lid'),
+    isGroup,
+    about,
+    description,
+    participants,
+    owner,
+    createdAt,
+    avatarUrl,
+    hasAvatar: Boolean(avatarUrl),
+    isSelf: Boolean(own) || jid === 'me',
+  };
+
+  profileCache.set(resolved, { at: Date.now(), data });
+  return data;
+}
+
+export async function getAvatar(jid) {
+  const resolved = resolveProfileJid(jid);
+  if (!sock || state !== 'connected' || MOCK) {
+    throw new WhatsAppError(404, 'whatsapp_avatar_unavailable', 'Avatar unavailable.');
+  }
+
+  const cached = avatarCache.get(resolved);
+  if (cached && Date.now() - cached.at < AVATAR_TTL_MS) {
+    return { buffer: cached.buffer, mimetype: cached.mimetype };
+  }
+
+  const missAt = avatarMisses.get(resolved);
+  if (missAt && Date.now() - missAt < AVATAR_MISS_TTL_MS) {
+    throw new WhatsAppError(404, 'whatsapp_avatar_unavailable', 'Avatar unavailable.');
+  }
+
+  let url;
+  try {
+    url = await withTimeout(sock.profilePictureUrl(resolved, 'image', 8_000), 9_000);
+  } catch {
+    url = null;
+  }
+  if (!url) {
+    avatarMisses.set(resolved, Date.now());
+    throw new WhatsAppError(404, 'whatsapp_avatar_unavailable', 'Avatar unavailable.');
+  }
+
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (error) {
+    throw new WhatsAppError(
+      502,
+      'whatsapp_avatar_failed',
+      `Could not download this avatar: ${error?.message || 'unknown error'}`,
+    );
+  }
+  if (!response.ok) {
+    avatarMisses.set(resolved, Date.now());
+    throw new WhatsAppError(404, 'whatsapp_avatar_unavailable', 'Avatar unavailable.');
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const mimetype = response.headers.get('content-type') || 'image/jpeg';
+  avatarCache.set(resolved, { at: Date.now(), buffer, mimetype });
+  if (avatarCache.size > MAX_AVATAR_CACHE) {
+    const oldest = avatarCache.keys().next().value;
+    if (oldest) avatarCache.delete(oldest);
+  }
+  return { buffer, mimetype };
 }
 
 export async function getMedia(id) {
