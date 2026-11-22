@@ -209,6 +209,11 @@ export interface WhatsAppStatus {
   lastError: string | null;
   mock: boolean;
   chatCount?: number;
+  history?: {
+    syncing: boolean;
+    progress: number | null;
+    isLatest: boolean;
+  };
 }
 
 export interface WhatsAppChat {

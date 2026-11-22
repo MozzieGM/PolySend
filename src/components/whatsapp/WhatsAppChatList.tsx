@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import {
   AlertCircle,
+  History,
   Loader2,
   LogOut,
   MessageCircle,
@@ -24,6 +25,7 @@ interface WhatsAppChatListProps {
   onSelect: (jid: string) => void;
   onDisconnect: () => void;
   onRefresh: () => void;
+  onReimport: () => void;
 }
 
 export function WhatsAppChatList({
@@ -38,8 +40,12 @@ export function WhatsAppChatList({
   onSelect,
   onDisconnect,
   onRefresh,
+  onReimport,
 }: WhatsAppChatListProps) {
   const { locale, t } = useI18n();
+  const syncing = Boolean(status?.history?.syncing);
+  const progress =
+    typeof status?.history?.progress === 'number' ? status.history.progress : null;
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return chats;
@@ -100,6 +106,25 @@ export function WhatsAppChatList({
         />
       </label>
 
+      {syncing && (
+        <div className="wa-sync" role="status">
+          <div className="wa-sync-line">
+            <Loader2 size={11} className="is-spinning" />
+            <span>{t('whatsapp.syncingHistory')}</span>
+            {progress != null && <b>{Math.round(progress)}%</b>}
+          </div>
+          <span className={`wa-sync-track ${progress == null ? 'is-indeterminate' : ''}`}>
+            <i
+              style={
+                progress == null
+                  ? undefined
+                  : { width: `${Math.min(100, Math.max(4, progress))}%` }
+              }
+            />
+          </span>
+        </div>
+      )}
+
       {error && (
         <div className="wa-list-error" role="alert">
           <AlertCircle size={12} strokeWidth={2.2} />
@@ -157,9 +182,27 @@ export function WhatsAppChatList({
 
       {!loading && !filtered.length && (
         <div className="wa-chat-empty">
-          <MessageCircle size={22} strokeWidth={1.7} />
-          <strong>{query ? t('whatsapp.searchEmpty') : t('whatsapp.noChats')}</strong>
-          {!query && <span>{t('whatsapp.noChatsBody')}</span>}
+          {syncing ? (
+            <Loader2 size={22} className="is-spinning" />
+          ) : (
+            <MessageCircle size={22} strokeWidth={1.7} />
+          )}
+          <strong>
+            {query
+              ? t('whatsapp.searchEmpty')
+              : syncing
+                ? t('whatsapp.syncingHistory')
+                : t('whatsapp.noChats')}
+          </strong>
+          {!query && (
+            <span>{syncing ? t('whatsapp.syncingHistoryHint') : t('whatsapp.importHistoryHint')}</span>
+          )}
+          {!query && !syncing && (
+            <button type="button" className="wa-import-history" onClick={onReimport}>
+              <History size={12} strokeWidth={2.2} />
+              {t('whatsapp.importHistory')}
+            </button>
+          )}
         </div>
       )}
 

@@ -271,6 +271,25 @@ export function WhatsAppStudio({
     }
   };
 
+  const handleReimport = async () => {
+    if (!window.confirm(t('whatsapp.reimportConfirm'))) return;
+    setConnectBusy(true);
+    setConnectError(null);
+    try {
+      await logoutWhatsApp();
+      setChats([]);
+      setActiveJid(null);
+      setMessages([]);
+      setMobilePane('list');
+      const next = await connectWhatsApp();
+      setStatus(next);
+    } catch (error) {
+      setConnectError(errorMessage(error, t));
+    } finally {
+      setConnectBusy(false);
+    }
+  };
+
   const handleSelectChat = (jid: string) => {
     setActiveJid(jid);
     setMobilePane('chat');
@@ -393,6 +412,7 @@ export function WhatsAppStudio({
           onSelect={handleSelectChat}
           onDisconnect={() => void handleDisconnect()}
           onRefresh={() => void refreshChats()}
+          onReimport={() => void handleReimport()}
         />
 
         {activeChat ? (

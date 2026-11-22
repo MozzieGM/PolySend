@@ -486,6 +486,14 @@ const en = {
   'whatsapp.disconnectConfirm':
     'Disconnect this WhatsApp session? You will need to scan the QR code again.',
   'whatsapp.chats': 'Chats',
+  'whatsapp.syncingHistory': 'Syncing conversations…',
+  'whatsapp.syncingHistoryHint':
+    'Older chats are arriving from your phone. This can take a minute.',
+  'whatsapp.importHistory': 'Import past chats',
+  'whatsapp.importHistoryHint':
+    'WhatsApp shares past chats when you link a device. Reconnect once to import them.',
+  'whatsapp.reimportConfirm':
+    'Reconnect this WhatsApp device to import past chats? You will need to scan the QR code again.',
   'whatsapp.searchChats': 'Search chats',
   'whatsapp.searchEmpty': 'No chats match your search.',
   'whatsapp.noChats': 'No conversations yet',
@@ -1054,6 +1062,14 @@ const pt: Record<MessageKey, string> = {
   'whatsapp.disconnectConfirm':
     'Desconectar esta sessão do WhatsApp? Você precisará escanear o QR code novamente.',
   'whatsapp.chats': 'Conversas',
+  'whatsapp.syncingHistory': 'Sincronizando conversas…',
+  'whatsapp.syncingHistoryHint':
+    'As conversas antigas estão chegando do celular. Isso pode levar um minuto.',
+  'whatsapp.importHistory': 'Importar conversas antigas',
+  'whatsapp.importHistoryHint':
+    'O WhatsApp compartilha o histórico quando um dispositivo é vinculado. Reconecte uma vez para importar.',
+  'whatsapp.reimportConfirm':
+    'Reconectar este dispositivo do WhatsApp para importar o histórico? Você precisará escanear o QR code novamente.',
   'whatsapp.searchChats': 'Buscar conversas',
   'whatsapp.searchEmpty': 'Nenhuma conversa corresponde à busca.',
   'whatsapp.noChats': 'Nenhuma conversa ainda',

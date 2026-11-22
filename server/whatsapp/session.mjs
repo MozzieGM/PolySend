@@ -54,6 +54,8 @@ let connectingPromise = null;
 let reconnectTimer = null;
 let reconnectAttempt = 0;
 let userLogout = false;
+let historyTimer = null;
+let historySync = { active: false, progress: null, isLatest: false };
 const lastIncomingKey = new Map();
 
 const MOCK_ME = {
@@ -81,11 +83,24 @@ export function getStatus() {
     me,
     lastError,
     mock: MOCK,
+    history: {
+      syncing: historySync.active,
+      progress: historySync.progress,
+      isLatest: historySync.isLatest,
+    },
   };
 }
 
 function emitStatus() {
   whatsappEvents.emit('status', getStatus());
+}
+
+function resetHistory() {
+  if (historyTimer) {
+    clearTimeout(historyTimer);
+    historyTimer = null;
+  }
+  historySync = { active: false, progress: null, isLatest: false };
 }
 
 function emitMessage(message, chat) {
@@ -228,6 +243,8 @@ async function applyHistory(data) {
     const normalized = normalizeChat(chat);
     if (normalized) upsertChat(normalized.id, { unread: normalized.unread });
   }
+
+  whatsappEvents.emit('chats', listChats());
 }
 
 async function setQr(qr) {
@@ -271,6 +288,7 @@ function setDisconnected(errorMessage) {
   qrDataUrl = null;
   lastQr = null;
   me = null;
+  resetHistory();
   if (errorMessage) lastError = errorMessage;
   emitStatus();
 }
@@ -296,6 +314,17 @@ function attachSocketHandlers(socket, authState) {
       lastError = null;
       reconnectAttempt = 0;
       clearReconnect();
+      historySync = { active: true, progress: 0, isLatest: false };
+      if (historyTimer) clearTimeout(historyTimer);
+      historyTimer = setTimeout(() => {
+        historyTimer = null;
+        if (historySync.active && !historySync.isLatest) {
+          historySync = { active: false, progress: null, isLatest: false };
+          console.log('  [whatsapp] history sync timed out; showing chats received so far');
+          emitStatus();
+        }
+      }, 45_000);
+      historyTimer.unref?.();
       const rawId = socket.user?.id ? jidNormalizedUser(socket.user.id) : null;
       me = rawId
         ? {
@@ -332,6 +361,7 @@ function attachSocketHandlers(socket, authState) {
         qrDataUrl = null;
         lastQr = null;
         me = null;
+        resetHistory();
         lastError = 'WhatsApp session ended. Connect again to scan a new QR code.';
         await fs.rm(AUTH_DIR, { recursive: true, force: true }).catch(() => {});
         emitStatus();
@@ -402,7 +432,24 @@ function attachSocketHandlers(socket, authState) {
   });
 
   socket.ev.on('messaging-history.set', (data) => {
-    void applyHistory(data);
+    historySync.active = true;
+    if (typeof data?.progress === 'number') historySync.progress = data.progress;
+    if (data?.isLatest) historySync.isLatest = true;
+    console.log(
+      `  [whatsapp] history: ${data?.chats?.length ?? 0} chats, ${data?.messages?.length ?? 0} messages, progress ${data?.progress ?? '-'}${data?.isLatest ? ' (latest)' : ''}`,
+    );
+    emitStatus();
+    void applyHistory(data).finally(() => {
+      if (data?.isLatest) {
+        historySync = { active: false, progress: 100, isLatest: true };
+        if (historyTimer) {
+          clearTimeout(historyTimer);
+          historyTimer = null;
+        }
+        emitStatus();
+      }
+      whatsappEvents.emit('chats', listChats());
+    });
   });
 }
 
@@ -422,7 +469,8 @@ async function createSocket() {
     printQRInTerminal: false,
     browser: ['PolySend', 'Chrome', '1.0.0'],
     markOnlineOnConnect: false,
-    syncFullHistory: false,
+    syncFullHistory: true,
+    shouldSyncHistoryMessage: () => true,
     generateHighQualityLinkPreview: false,
   });
 
@@ -456,6 +504,7 @@ export async function connect() {
 
   userLogout = false;
   clearReconnect();
+  resetHistory();
 
   connectingPromise = (async () => {
     state = 'connecting';
@@ -495,6 +544,7 @@ export async function logout() {
   qrDataUrl = null;
   lastQr = null;
   me = null;
+  resetHistory();
   lastError = null;
   await fs.rm(AUTH_DIR, { recursive: true, force: true }).catch(() => {});
   emitStatus();

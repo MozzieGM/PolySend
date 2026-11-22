@@ -215,8 +215,10 @@ para experimentar.
   badges de não lidas e busca.
 - Envie com **Enter**; **Shift+Enter** quebra a linha. Mensagens recebidas, grupos e mensagens
   enviadas são suportados.
-- Conversas e mensagens recentes ficam em cache em `.wa-store.json` (fora do Git). O histórico
-  completo do WhatsApp não é baixado.
+- O histórico é solicitado quando o dispositivo é vinculado. Se a conta foi vinculada antes do
+  full sync ser habilitado, use **Importar conversas antigas** (ou Desconecte e escaneie o QR
+  novamente) uma vez; a lista se preenche sozinha conforme os lotes chegam.
+- Conversas e mensagens recentes ficam em cache em `.wa-store.json` (fora do Git).
 - Mensagens de mídia aparecem como rótulos (`Foto`, `Mensagem de voz`, `Documento`). Anexos,
   áudios, reações e chamadas ainda não estão implementados.
 

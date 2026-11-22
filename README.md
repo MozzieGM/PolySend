@@ -213,8 +213,10 @@ for experiments.
   search.
 - Send with **Enter**; **Shift+Enter** adds a line. Incoming messages, groups, and sent messages
   are supported.
-- Chats and recent messages are cached in `.wa-store.json` (gitignored). Full WhatsApp history is
-  not downloaded.
+- History is requested when you link the device. If the account was linked before full sync was
+  enabled, use **Import past chats** (or Disconnect and scan the QR again) once; the list fills in
+  automatically as batches arrive.
+- Chats and recent messages are cached in `.wa-store.json` (gitignored).
 - Media messages appear as labels (`Photo`, `Voice message`, `Document`). Attachments, voice
   notes, reactions, and calls are not implemented yet.
 
