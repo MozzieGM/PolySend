@@ -240,6 +240,29 @@ body {
   text-transform: uppercase;
 }
 
+.brand-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 6.5px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.brand-author:hover {
+  border-color: rgba(200, 247, 81, 0.26);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.brand-author svg {
+  opacity: 0.8;
+}
 .brand-sub {
   font-family: var(--font-mono);
   font-size: 8.5px;
@@ -3588,6 +3611,171 @@ body {
 }
 
 /* =========================================================
+   Author credit
+   ========================================================= */
+
+.author-modal {
+  position: relative;
+  width: min(460px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 22px;
+  background:
+    radial-gradient(360px 240px at 50% 0%, rgba(200, 247, 81, 0.1), transparent 66%),
+    linear-gradient(165deg, #11150d, #0a0c0f 58%, #08090c);
+  box-shadow: 0 40px 100px -45px rgba(0, 0, 0, 0.95);
+  animation: wa-bubble-in 0.2s ease both;
+}
+.author-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+.author-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 32px 30px 22px;
+  text-align: center;
+}
+.author-avatar {
+  width: 78px;
+  height: 78px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 3px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, var(--accent-bright), #8fce2f);
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  box-shadow: 0 24px 55px -24px rgba(200, 247, 81, 0.65);
+}
+.author-hero h2 {
+  margin-top: 2px;
+  font-size: clamp(22px, 4vw, 27px);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+}
+.author-handle {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--accent);
+}
+.author-hero p {
+  max-width: 350px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.65;
+}
+.author-links {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 0 24px 20px;
+}
+.author-links a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-soft);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.author-links a:hover {
+  border-color: rgba(200, 247, 81, 0.24);
+  background: var(--accent-soft);
+}
+.author-link-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--accent);
+}
+.author-links a > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.author-links strong {
+  font-size: 10px;
+  font-weight: 650;
+}
+.author-links small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--dim);
+}
+.author-links a > svg {
+  flex-shrink: 0;
+  color: var(--dim);
+}
+.author-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 24px 20px;
+  border-top: 1px solid var(--line);
+}
+.author-foot > span {
+  font-family: var(--font-mono);
+  font-size: 6.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.author-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.author-chips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 7px;
+}
+.author-chips svg {
+  color: var(--accent);
+}
+@media (max-width: 620px) {
+  .author-hero {
+    padding: 28px 18px 18px;
+  }
+  .author-links {
+    padding: 0 16px 18px;
+  }
+  .author-foot {
+    padding: 13px 16px 18px;
+  }
+}
+
+/* =========================================================
    Workspace switch + WhatsApp studio
    ========================================================= */
 
@@ -5539,6 +5727,18 @@ body {
   }
   .wa-empty h1 {
     font-size: 21px;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand-author {
+    padding: 3px;
+    font-size: 0;
+    gap: 0;
+  }
+  .brand-author svg {
+    width: 10px;
+    height: 10px;
   }
 }
 

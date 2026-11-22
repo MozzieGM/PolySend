@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  Code2,
   Gauge,
   KeyRound,
   Languages,
@@ -24,6 +25,7 @@ interface HeaderProps {
   workspace: Workspace;
   deliveryConfigured: boolean;
   onWorkspaceChange: (workspace: Workspace) => void;
+  onOpenAuthor: () => void;
   onOpenKey: () => void;
   onOpenModels: () => void;
   onOpenDelivery: () => void;
@@ -51,6 +53,7 @@ export function Header({
   workspace,
   deliveryConfigured,
   onWorkspaceChange,
+  onOpenAuthor,
   onOpenKey,
   onOpenModels,
   onOpenDelivery,
@@ -74,6 +77,16 @@ export function Header({
                 <Radio size={10} strokeWidth={2.8} />
                 live
               </span>
+              <button
+                type="button"
+                className="brand-author"
+                onClick={onOpenAuthor}
+                title={t('author.aria')}
+                aria-label={t('author.aria')}
+              >
+                <Code2 size={9} strokeWidth={2.2} />
+                {t('author.credit')}
+              </button>
             </div>
             <span className="brand-sub">
               {workspace === 'whatsapp' ? 'whatsapp studio · go api' : 'email studio · go api'}

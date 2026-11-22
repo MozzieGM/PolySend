@@ -4,6 +4,12 @@
   "version": "1.0.0",
   "type": "module",
   "description": "PolySend — live email and WhatsApp studio powered by the OpenCode Go API",
+  "author": "Gabriel Martinez de Souza (MozzieGM) — https://github.com/MozzieGM",
+  "homepage": "https://github.com/MozzieGM/PolySend",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MozzieGM/PolySend.git"
+  },
   "engines": {
     "node": ">=20"
   },

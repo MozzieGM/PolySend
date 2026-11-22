@@ -2,6 +2,9 @@
 
 **English** · [Português](README.pt-BR.md)
 
+**Built by [Gabriel Martinez de Souza (MozzieGM)](https://github.com/MozzieGM)** ·
+[LinkedIn](https://www.linkedin.com/in/gabrielmartinezdesouza/)
+
 **PolySend** is a live email-writing studio powered by **OpenCode Go** models.
 
 ![PolySend preview](img/preview-en.png)
@@ -410,6 +413,17 @@ demo with friends, Go works nicely.
 - **Change the initial model**: `MODEL_STORAGE`/`selectedId` in `src/App.tsx`.
 - **Change the colors**: CSS variables at the top of `src/styles.css`.
 - **Use another default plan**: the `plan` selector in `src/App.tsx` (Go, Go Plus, Go Teams).
+
+## Author
+
+![Author card](img/author-card.png)
+
+**Gabriel Martinez de Souza (MozzieGM)**
+
+- GitHub: <https://github.com/MozzieGM>
+- LinkedIn: <https://www.linkedin.com/in/gabrielmartinezdesouza/>
+
+The **by MozzieGM** badge in the header opens a short author card with both links.
 
 ## Docs
 

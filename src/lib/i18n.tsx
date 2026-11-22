@@ -458,6 +458,15 @@ const en = {
   'workspace.whatsapp': 'WhatsApp',
   'workspace.switchAria': 'Switch workspace',
 
+  'author.credit': 'by MozzieGM',
+  'author.aria': 'About MozzieGM',
+  'author.eyebrow': 'About the maker',
+  'author.bio':
+    'I build products in public. PolySend is a live email and WhatsApp studio powered by OpenCode Go, Resend, and Baileys.',
+  'author.github': 'GitHub',
+  'author.linkedin': 'LinkedIn',
+  'author.builtWith': 'Built with',
+
   'whatsapp.eyebrow': 'Conversations · Baileys',
   'whatsapp.title': 'WhatsApp Studio',
   'whatsapp.subtitle': 'Live chats with an AI copilot',
@@ -1061,6 +1070,15 @@ const pt: Record<MessageKey, string> = {
   'workspace.email': 'E-mail',
   'workspace.whatsapp': 'WhatsApp',
   'workspace.switchAria': 'Alternar workspace',
+
+  'author.credit': 'by MozzieGM',
+  'author.aria': 'Sobre MozzieGM',
+  'author.eyebrow': 'Sobre o autor',
+  'author.bio':
+    'Eu construo produtos em público. O PolySend é um estúdio ao vivo de e-mail e WhatsApp com OpenCode Go, Resend e Baileys.',
+  'author.github': 'GitHub',
+  'author.linkedin': 'LinkedIn',
+  'author.builtWith': 'Construído com',
 
   'whatsapp.eyebrow': 'Conversas · Baileys',
   'whatsapp.title': 'WhatsApp Studio',

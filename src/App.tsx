@@ -7,6 +7,7 @@ import { UsageBar } from './components/UsageBar';
 import { MobileTabs, type MobileTab } from './components/MobileTabs';
 import { DeliveryModal } from './components/DeliveryModal';
 import { KeyModal } from './components/KeyModal';
+import { AuthorModal } from './components/AuthorModal';
 import { WhatsAppStudio } from './components/whatsapp/WhatsAppStudio';
 import { Toast, type ToastData, type ToastTone } from './components/Toast';
 import {
@@ -140,6 +141,7 @@ export default function App() {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [stats, setStats] = useState<SessionStats>(EMPTY_STATS);
   const [keyModalOpen, setKeyModalOpen] = useState(false);
+  const [authorOpen, setAuthorOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [deliveryTab, setDeliveryTab] = useState<'send' | 'settings'>('settings');
   const [modelsDrawerOpen, setModelsDrawerOpen] = useState(false);
@@ -829,6 +831,7 @@ export default function App() {
         plan={plan}
         workspace={workspace}
         onWorkspaceChange={handleWorkspaceChange}
+        onOpenAuthor={() => setAuthorOpen(true)}
         onOpenKey={() => setKeyModalOpen(true)}
         onOpenModels={handleOpenModels}
         onOpenDelivery={handleOpenDelivery}
@@ -951,6 +954,8 @@ export default function App() {
       )}
         </>
       )}
+
+      <AuthorModal open={authorOpen} onClose={() => setAuthorOpen(false)} />
 
       <KeyModal
         open={keyModalOpen}

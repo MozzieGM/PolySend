@@ -2,6 +2,9 @@
 
 [English](README.md) · **Português**
 
+**Feito por [Gabriel Martinez de Souza (MozzieGM)](https://github.com/MozzieGM)** ·
+[LinkedIn](https://www.linkedin.com/in/gabrielmartinezdesouza/)
+
 **PolySend** é uma demo de e-mails escritos **em tempo real** com os modelos do **OpenCode Go**.
 
 ![Preview do PolySend](img/tela-cheia.png)
@@ -413,6 +416,17 @@ chaves dos seus próprios providers. Para a demo ao vivo com amigos, o Go funcio
 - **Mudar o modelo inicial**: `MODEL_STORAGE`/`selectedId` em `src/App.tsx`.
 - **Mudar as cores**: variáveis CSS no topo de `src/styles.css`.
 - **Outro plano como padrão**: seletor `plan` em `src/App.tsx` (Go, Go Plus, Go Teams).
+
+## Autor
+
+![Card do autor](img/author-card.png)
+
+**Gabriel Martinez de Souza (MozzieGM)**
+
+- GitHub: <https://github.com/MozzieGM>
+- LinkedIn: <https://www.linkedin.com/in/gabrielmartinezdesouza/>
+
+O selo **by MozzieGM** no header abre um card curto com os dois links.
 
 ## Documentação
 
